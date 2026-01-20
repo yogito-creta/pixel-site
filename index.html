@@ -17,7 +17,7 @@
 </head>
 <body>
 
-<header>Sürükle: Tek Parmak/Sağ Tık | Zoom: İki Parmak/Tekerlek</header>
+<header>Kaydır: Parmak/Sağ Tık | Zoom: İki Parmak/Tekerlek</header>
 <div id="palette"></div>
 
 <div id="wrap">
@@ -65,18 +65,15 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // Arka Plan
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-  // Pixeller
   for (const key in pixels) {
     const [px, py] = key.split(",");
     ctx.fillStyle = pixels[key];
     ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
 
-  // Izgara (Yakınlaşınca görünür)
   if (scale > 15) {
     ctx.strokeStyle = "#222";
     ctx.lineWidth = 1 / scale; 
@@ -95,7 +92,7 @@ function draw() {
 let isDragging = false;
 let lastPos = { x: 0, y: 0 };
 let lastPinchDist = 0;
-let isMoving = false; // Tıklama mı sürükleme mi ayrımı için
+let isMoving = false; 
 
 // --- FARE OLAYLARI ---
 window.addEventListener("mousedown", e => {
@@ -116,7 +113,6 @@ window.addEventListener("mousemove", e => {
 
 window.addEventListener("mouseup", e => {
   if (!isMoving && e.button === 0) {
-    const rect = canvas.getBoundingClientRect();
     const x = Math.floor((e.clientX - offsetX) / scale);
     const y = Math.floor((e.clientY - offsetY) / scale);
     if (x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE) placePixel(x, y);
@@ -138,7 +134,6 @@ window.addEventListener("touchstart", e => {
 window.addEventListener("touchmove", e => {
   e.preventDefault();
   if (e.touches.length === 2) {
-    // Mobil Zoom
     const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
     const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
@@ -151,7 +146,6 @@ window.addEventListener("touchmove", e => {
     lastPinchDist = dist;
     draw();
   } else if (e.touches.length === 1 && isDragging) {
-    // Mobil Kaydırma
     isMoving = true;
     offsetX += e.touches[0].clientX - lastPos.x;
     offsetY += e.touches[0].clientY - lastPos.y;
@@ -161,7 +155,6 @@ window.addEventListener("touchmove", e => {
 }, { passive: false });
 
 window.addEventListener("touchend", e => {
-  // Eğer parmak hareket etmediyse (dokunup çekildiyse) boya
   if (!isMoving && e.changedTouches.length === 1) {
     const t = e.changedTouches[0];
     const x = Math.floor((t.clientX - offsetX) / scale);
@@ -171,7 +164,6 @@ window.addEventListener("touchend", e => {
   isDragging = false;
 });
 
-// Masaüstü Tekerlek Zoom
 window.addEventListener("wheel", e => {
   const worldPos = { x: (e.clientX - offsetX) / scale, y: (e.clientY - offsetY) / scale };
   scale = Math.min(Math.max(0.5, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 60);
@@ -190,12 +182,8 @@ function placePixel(x, y) {
   }).catch(err => console.error("Hata:", err));
 }
 
-// Başlangıçta verileri çek
 fetch("/pixels").then(r => r.json()).then(data => {
   pixels = data;
-  draw();
-}).catch(() => {
-  ui.innerText = "Sunucuya bağlanılamadı!";
   draw();
 });
 
