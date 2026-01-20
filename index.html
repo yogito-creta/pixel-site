@@ -3,23 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel World 2.0 - Beyaz Tema Fix</title>
+<title>Pixel World - Kesin Çözüm</title>
 <style>
-  /* Sayfa genelini koyu yapıyoruz ki beyaz harita belli olsun */
   body { margin: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  header { padding: 10px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
-  #palette { display: flex; gap: 8px; padding: 10px; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
+  header { height: 40px; line-height: 40px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
+  #palette { height: 55px; display: flex; gap: 8px; padding: 0 10px; align-items: center; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
   .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
-  .color.active { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+  .color.active { border-color: #fff; transform: scale(1.1); }
   #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
-  /* Canvas arka planını burada da beyaz tanımlıyoruz */
   canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
   #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; border: 1px solid #444; }
 </style>
 </head>
 <body>
 
-<header>Beyaz Tema Fix - Tıkladığın Yere Çizer</header>
+<header>Pixel World - Tam İsabet Modu</header>
 <div id="palette"></div>
 
 <div id="wrap">
@@ -35,7 +33,7 @@ const ui = document.getElementById("ui");
 const MAP_SIZE = 2000;
 let scale = 10; 
 let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
-let offsetY = window.innerHeight / 2 - (MAP_SIZE * scale) / 2;
+let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2; // 95px (header + palette) payı
 let currentColor = "#ff0000";
 let pixels = {};
 
@@ -57,11 +55,8 @@ colors.forEach(c => {
 
 function draw() {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  canvas.height = window.innerHeight - 95; // Üst menülerin toplam yüksekliğini çıkardık
   
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Arka planı tamamen beyaz boya
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -69,18 +64,15 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // Harita Sınırı (Beyaz)
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-  // Pixelleri Çiz
   for (const key in pixels) {
     const [px, py] = key.split(",");
     ctx.fillStyle = pixels[key];
     ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
 
-  // Izgara Çizgileri
   if (scale > 5) {
     ctx.strokeStyle = "#e0e0e0"; 
     ctx.lineWidth = 0.5 / scale;
@@ -91,18 +83,13 @@ function draw() {
     }
     ctx.stroke();
   }
-  
   ctx.restore();
-  
-  // UI Güncelleme
-  const worldX = Math.floor((-offsetX) / scale);
-  const worldY = Math.floor((-offsetY) / scale);
-  ui.innerText = `Zoom: ${scale.toFixed(1)}x | Harita: 2000x2000`;
+  ui.innerText = `Zoom: ${scale.toFixed(1)}x | Koordinat Hatası Giderildi`;
 }
 
-// Koordinat Hesaplama Fonksiyonu (Hataları önlemek için)
+// KAYMAYI DÜZELTEN KRİTİK FONKSİYON
 function getPixelPointer(clientX, clientY) {
-  const rect = canvas.getBoundingClientRect();
+  const rect = canvas.getBoundingClientRect(); // Canvas'ın ekrandaki gerçek yerini al
   const x = Math.floor((clientX - rect.left - offsetX) / scale);
   const y = Math.floor((clientY - rect.top - offsetY) / scale);
   return { x, y };
@@ -113,18 +100,15 @@ let lastPos = { x: 0, y: 0 };
 let lastPinchDist = 0;
 let isMoving = false;
 
-// FARE OLAYLARI
 window.addEventListener("mousedown", e => {
-  isDragging = true;
-  isMoving = false;
+  if (e.target.id !== "canvas") return;
+  isDragging = true; isMoving = false;
   lastPos = { x: e.clientX, y: e.clientY };
 });
 
 window.addEventListener("mousemove", e => {
   if (isDragging) {
-    if (Math.abs(e.clientX - lastPos.x) > 2 || Math.abs(e.clientY - lastPos.y) > 2) {
-      isMoving = true;
-    }
+    if (Math.abs(e.clientX - lastPos.x) > 3 || Math.abs(e.clientY - lastPos.y) > 3) isMoving = true;
     offsetX += e.clientX - lastPos.x;
     offsetY += e.clientY - lastPos.y;
     lastPos = { x: e.clientX, y: e.clientY };
@@ -133,32 +117,31 @@ window.addEventListener("mousemove", e => {
 });
 
 window.addEventListener("mouseup", e => {
-  if (!isMoving && e.button === 0) {
+  if (!isMoving && e.button === 0 && e.target.id === "canvas") {
     const pos = getPixelPointer(e.clientX, e.clientY);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
-      placePixel(pos.x, pos.y);
-    }
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
   }
   isDragging = false;
 });
 
-// MOBİL OLAYLARI
+// MOBİL İÇİN DÜZELTME
 window.addEventListener("touchstart", e => {
+  if (e.target.id !== "canvas") return;
   if (e.touches.length === 2) {
     lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-  } else if (e.touches.length === 1) {
-    isDragging = true;
-    isMoving = false;
+  } else {
+    isDragging = true; isMoving = false;
     lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }
 }, { passive: false });
 
 window.addEventListener("touchmove", e => {
+  if (e.target.id !== "canvas") return;
   e.preventDefault();
   if (e.touches.length === 2) {
     const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95; // Mobil koordinat düzeltme
     const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
     const delta = dist / lastPinchDist;
     scale = Math.min(Math.max(0.5, scale * delta), 60);
@@ -166,7 +149,7 @@ window.addEventListener("touchmove", e => {
     offsetY = midY - worldPos.y * scale;
     lastPinchDist = dist;
     draw();
-  } else if (e.touches.length === 1 && isDragging) {
+  } else if (isDragging) {
     isMoving = true;
     offsetX += e.touches[0].clientX - lastPos.x;
     offsetY += e.touches[0].clientY - lastPos.y;
@@ -176,21 +159,22 @@ window.addEventListener("touchmove", e => {
 }, { passive: false });
 
 window.addEventListener("touchend", e => {
-  if (!isMoving && e.changedTouches.length === 1) {
+  if (!isMoving && e.changedTouches.length === 1 && e.target.id === "canvas") {
     const t = e.changedTouches[0];
     const pos = getPixelPointer(t.clientX, t.clientY);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
-      placePixel(pos.x, pos.y);
-    }
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
   }
   isDragging = false;
 });
 
 window.addEventListener("wheel", e => {
-  const worldPos = { x: (e.clientX - offsetX) / scale, y: (e.clientY - offsetY) / scale };
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = e.clientX - rect.left;
+  const mouseY = e.clientY - rect.top;
+  const worldPos = { x: (mouseX - offsetX) / scale, y: (mouseY - offsetY) / scale };
   scale = Math.min(Math.max(0.5, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 60);
-  offsetX = e.clientX - worldPos.x * scale;
-  offsetY = e.clientY - worldPos.y * scale;
+  offsetX = mouseX - worldPos.x * scale;
+  offsetY = mouseY - worldPos.y * scale;
   draw();
 }, { passive: false });
 
