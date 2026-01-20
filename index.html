@@ -6,62 +6,47 @@
 <title>Pixel World</title>
 
 <style>
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
 }
-
-body {
-  margin: 0;
-  background: #0b0b0b;
-  color: #fff;
-  font-family: Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
+header{
+  padding:10px;
+  text-align:center;
+  background:#111;
+  font-weight:bold;
 }
-
-/* ÜST BAR */
-header {
-  padding: 10px;
-  text-align: center;
-  background: #111;
-  font-weight: bold;
-  font-size: 16px;
+#palette{
+  display:flex;
+  gap:8px;
+  padding:10px;
+  overflow-x:auto;
+  background:#111;
 }
-
-/* PALET */
-#palette {
-  display: flex;
-  gap: 8px;
-  padding: 10px;
-  overflow-x: auto;
-  background: #111;
+.color{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  border:2px solid #333;
 }
-
-.color {
-  min-width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 2px solid #333;
+.color.active{
+  border-color:#fff;
 }
-
-.color.active {
-  border: 2px solid #fff;
+#wrap{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
-
-/* CANVAS ALANI */
-#canvas-wrap {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-canvas {
-  border: 2px solid #222;
-  image-rendering: pixelated;
-  touch-action: none;
+canvas{
+  border:2px solid #222;
+  image-rendering:pixelated;
+  touch-action:none;
 }
 </style>
 </head>
@@ -72,7 +57,7 @@ canvas {
 
 <div id="palette"></div>
 
-<div id="canvas-wrap">
+<div id="wrap">
   <canvas id="canvas" width="320" height="320"></canvas>
 </div>
 
@@ -87,14 +72,13 @@ const colors = [
   "#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"
 ];
 
-// PALET OLUŞTUR
 const palette = document.getElementById("palette");
+
 colors.forEach(c => {
   const d = document.createElement("div");
   d.className = "color";
   d.style.background = c;
   if (c === currentColor) d.classList.add("active");
-
   d.onclick = () => {
     currentColor = c;
     document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
@@ -103,61 +87,54 @@ colors.forEach(c => {
   palette.appendChild(d);
 });
 
-// GRID
-function drawGrid() {
+function drawGrid(){
   ctx.strokeStyle = "#222";
-  for (let i = 0; i <= 32; i++) {
+  for(let i=0;i<=32;i++){
     ctx.beginPath();
-    ctx.moveTo(i * size, 0);
-    ctx.lineTo(i * size, 320);
+    ctx.moveTo(i*size,0);
+    ctx.lineTo(i*size,320);
     ctx.stroke();
-
     ctx.beginPath();
-    ctx.moveTo(0, i * size);
-    ctx.lineTo(320, i * size);
+    ctx.moveTo(0,i*size);
+    ctx.lineTo(320,i*size);
     ctx.stroke();
   }
 }
 
-// TÜM PIXELLERİ ÇİZ
-function drawAll(data) {
-  ctx.clearRect(0, 0, 320, 320);
-  for (const key in data) {
-    const [x, y] = key.split(",");
-    ctx.fillStyle = data[key];
-    ctx.fillRect(x * size, y * size, size, size);
+function drawAll(data){
+  ctx.clearRect(0,0,320,320);
+  for(const k in data){
+    const [x,y] = k.split(",");
+    ctx.fillStyle = data[k];
+    ctx.fillRect(x*size, y*size, size, size);
   }
   drawGrid();
 }
 
-// SERVER'DAN ÇEK
-fetch("/pixels")
-  .then(r => r.json())
-  .then(drawAll);
+fetch("/pixels").then(r=>r.json()).then(drawAll);
 
-// PIXEL KOY
-function placePixel(e) {
+function place(e){
   const rect = canvas.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / size);
   const y = Math.floor((e.clientY - rect.top) / size);
 
   // anında çiz
   ctx.fillStyle = currentColor;
-  ctx.fillRect(x * size, y * size, size, size);
+  ctx.fillRect(x*size, y*size, size, size);
   drawGrid();
 
-  // server'a yolla
-  fetch("/pixel", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ x, y, color: currentColor })
+  // server'a gönder
+  fetch("/pixel",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({x,y,color:currentColor})
   });
 }
 
-canvas.addEventListener("click", placePixel);
-canvas.addEventListener("touchstart", e => {
+canvas.addEventListener("click", place);
+canvas.addEventListener("touchstart", e=>{
   e.preventDefault();
-  placePixel(e.touches[0]);
+  place(e.touches[0]);
 });
 </script>
 
