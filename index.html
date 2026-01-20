@@ -3,77 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Pixel World</title>
+<title>Pixel World 2.0</title>
 
 <style>
-body{
-  margin:0;
-  background:#0b0b0b;
-  color:#fff;
-  font-family:Arial;
-  display:flex;
-  flex-direction:column;
-  height:100vh;
+body {
+  margin: 0; background: #0b0b0b; color: #fff;
+  font-family: Arial; display: flex; flex-direction: column;
+  height: 100vh; overflow: hidden; /* Kaydırmayı engellemek için */
 }
-header{
-  padding:10px;
-  text-align:center;
-  background:#111;
-  font-weight:bold;
+header { padding: 10px; text-align: center; background: #111; z-index: 10; }
+#palette {
+  display: flex; gap: 8px; padding: 10px; overflow-x: auto;
+  background: #111; z-index: 10; border-bottom: 1px solid #333;
 }
-#palette{
-  display:flex;
-  gap:8px;
-  padding:10px;
-  overflow-x:auto;
-  background:#111;
-}
-.color{
-  width:32px;
-  height:32px;
-  border-radius:8px;
-  border:2px solid #333;
-}
-.color.active{
-  border-color:#fff;
-}
-#wrap{
-  flex:1;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-canvas{
-  border:2px solid #222;
-  image-rendering:pixelated;
-  touch-action:none;
-}
+.color { width: 32px; height: 32px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
+.color.active { border-color: #fff; }
+#wrap { flex: 1; position: relative; overflow: hidden; cursor: grab; }
+#wrap:active { cursor: grabbing; }
+canvas { image-rendering: pixelated; touch-action: none; }
 </style>
 </head>
 
 <body>
 
-<header>Selam dostlar siteyi yeni açtım hata olabilir</header>
-
+<header>Pixel World: 2000x2000 Harita (Sürükle ve Yakınlaştır)</header>
 <div id="palette"></div>
 
 <div id="wrap">
-  <canvas id="canvas" width="800" height="800"></canvas>
+  <canvas id="canvas"></canvas>
 </div>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const size = 10;
+const wrap = document.getElementById("wrap");
+
+// AYARLAR
+const MAP_SIZE = 2000; // 2000x2000 pixel
+const PIXEL_SIZE = 1;  // Her pixel 1 birim (performans için)
 let currentColor = "#ff0000";
+let pixelData = {};
 
-const colors = [
-  "#ffffff","#000000","#ff0000","#00ff00","#0000ff",
-  "#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"
-];
+// KAMERA DURUMU
+let scale = 5; // Başlangıç yakınlığı
+let offsetX = 0;
+let offsetY = 0;
+let isDragging = false;
+let lastMousePos = { x: 0, y: 0 };
 
+const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
+
+// Palette Oluşturma
 const palette = document.getElementById("palette");
-
 colors.forEach(c => {
   const d = document.createElement("div");
   d.className = "color";
@@ -87,56 +68,116 @@ colors.forEach(c => {
   palette.appendChild(d);
 });
 
-function drawGrid(){
-  ctx.strokeStyle = "#222";
-  for(let i=0;i<=32;i++){
-    ctx.beginPath();
-    ctx.moveTo(i*size,0);
-    ctx.lineTo(i*size,320);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0,i*size);
-    ctx.lineTo(320,i*size);
-    ctx.stroke();
+// Canvas Boyutlandırma
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  draw();
+}
+window.onresize = resize;
+resize();
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+
+  // Arka plan (Harita sınırları)
+  ctx.fillStyle = "#1a1a1a";
+  ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
+
+  // Çizilen Pixelleri Çiz
+  for (const key in pixelData) {
+    const [x, y] = key.split(",").map(Number);
+    ctx.fillStyle = pixelData[key];
+    ctx.fillRect(x, y, 1, 1);
   }
-}
 
-function drawAll(data){
-  ctx.clearRect(0,0,320,320);
-  for(const k in data){
-    const [x,y] = k.split(",");
-    ctx.fillStyle = data[k];
-    ctx.fillRect(x*size, y*size, size, size);
+  // Izgara (Sadece çok yakındayken göster - Performans için)
+  if (scale > 10) {
+    ctx.strokeStyle = "#222";
+    ctx.lineWidth = 0.05;
+    for (let i = 0; i <= MAP_SIZE; i += 5) {
+      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
+    }
   }
-  drawGrid();
+
+  ctx.restore();
 }
 
-fetch("/pixels").then(r=>r.json()).then(drawAll);
-
-function place(e){
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - rect.left) / size);
-  const y = Math.floor((e.clientY - rect.top) / size);
-
-  // anında çiz
-  ctx.fillStyle = currentColor;
-  ctx.fillRect(x*size, y*size, size, size);
-  drawGrid();
-
-  // server'a gönder
-  fetch("/pixel",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({x,y,color:currentColor})
-  });
+// Koordinat Dönüştürücü (Ekrana tıklanan yeri harita koordinatına çevirir)
+function screenToWorld(x, y) {
+  const worldX = Math.floor((x - offsetX) / scale);
+  const worldY = Math.floor((y - offsetY) / scale);
+  return { x: worldX, y: worldY };
 }
 
-canvas.addEventListener("click", place);
-canvas.addEventListener("touchstart", e=>{
-  e.preventDefault();
-  place(e.touches[0]);
+// FARE VE DOKUNMATİK OLAYLARI
+wrap.addEventListener('mousedown', e => {
+  if (e.button === 1 || e.shiftKey) { // Orta tuş veya Shift ile sürükle
+    isDragging = true;
+    lastMousePos = { x: e.clientX, y: e.clientY };
+  } else if (e.button === 0) { // Sol tık ile çiz
+    const pos = screenToWorld(e.clientX, e.clientY - canvas.offsetTop);
+    if(pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
+      placePixel(pos.x, pos.y);
+    }
+  }
 });
-</script>
 
+window.addEventListener('mousemove', e => {
+  if (isDragging) {
+    offsetX += e.clientX - lastMousePos.x;
+    offsetY += e.clientY - lastMousePos.y;
+    lastMousePos = { x: e.clientX, y: e.clientY };
+    draw();
+  }
+});
+
+window.addEventListener('mouseup', () => isDragging = false);
+
+// Zoom (Tekerlek)
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const zoomSpeed = 0.1;
+  const delta = e.deltaY > 0 ? 1 - zoomSpeed : 1 + zoomSpeed;
+  
+  // Mouse'un olduğu yere doğru zoom yapma
+  const mouseX = e.clientX;
+  const mouseY = e.clientY - canvas.offsetTop;
+  
+  const worldPos = screenToWorld(mouseX, mouseY);
+  
+  scale *= delta;
+  scale = Math.max(0.5, Math.min(scale, 50)); // Zoom sınırları
+
+  offsetX = mouseX - worldPos.x * scale;
+  offsetY = mouseY - worldPos.y * scale;
+  
+  draw();
+}, { passive: false });
+
+function placePixel(x, y) {
+  pixelData[`${x},${y}`] = currentColor;
+  draw();
+  
+  // Server'a gönder (Senin mevcut yapın)
+  fetch("/pixel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ x, y, color: currentColor })
+  }).catch(err => console.log("Server bağlantısı yok"));
+}
+
+// Başlangıçta verileri çek
+fetch("/pixels").then(r => r.json()).then(data => {
+  pixelData = data;
+  draw();
+}).catch(() => draw()); // Hata alsa da boş haritayı çiz
+
+</script>
 </body>
 </html>
