@@ -1,14 +1,36 @@
 const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
-const http = require("http").createServer(app);
-const io = require("socket.io")(http);
+const server = http.createServer(app);
+const io = new Server(server);
 
-app.use(express.static("."));
+app.use(express.static("public"));
 
-io.on("connection", socket => {
-  socket.on("pixel", data => {
-    io.emit("pixel", data);
+const WIDTH = 50;
+const HEIGHT = 30;
+
+// Canvas verisi (sunucuda tutulur)
+let pixels = Array.from({ length: HEIGHT }, () =>
+  Array.from({ length: WIDTH }, () => "#ffffff")
+);
+
+io.on("connection", (socket) => {
+  console.log("Biri girdi lan");
+
+  // Yeni girene tüm canvas gönder
+  socket.emit("init", pixels);
+
+  socket.on("draw", ({ x, y, color }) => {
+    if (pixels[y] && pixels[y][x]) {
+      pixels[y][x] = color;
+      socket.broadcast.emit("draw", { x, y, color });
+    }
   });
 });
 
-http.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log("Server ayakta:", PORT);
+});
