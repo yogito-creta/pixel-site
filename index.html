@@ -1,22 +1,85 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pixel Site</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: Arial;
+      text-align: center;
+    }
+    #toolbar {
+      margin: 10px;
+    }
+    #canvas {
+      display: grid;
+      grid-template-columns: repeat(50, 12px);
+      justify-content: center;
+      margin: auto;
+    }
+    .pixel {
+      width: 12px;
+      height: 12px;
+      background: white;
+      border: 1px solid #222;
+      cursor: pointer;
+    }
+  </style>
+</head>
 <body>
-<canvas id="c" width="400" height="400" style="border:1px solid"></canvas>
-<script src="/socket.io/socket.io.js"></script>
+
+<h2>Pixel Tuval 🎨</h2>
+
+<div id="toolbar">
+  Renk seç:
+  <input type="color" id="color" value="#ff0000">
+</div>
+
+<div id="canvas"></div>
+
 <script>
-const socket = io();
-const c = document.getElementById("c");
-const ctx = c.getContext("2d");
+  const socket = io();
+  const canvas = document.getElementById("canvas");
+  const colorInput = document.getElementById("color");
 
-c.onclick = e => {
-  const x = Math.floor(e.offsetX / 10) * 10;
-  const y = Math.floor(e.offsetY / 10) * 10;
-  socket.emit("pixel", {x,y});
-};
+  const WIDTH = 50;
+  const HEIGHT = 30;
+  let pixels = [];
 
-socket.on("pixel", p => {
-  ctx.fillRect(p.x, p.y, 10, 10);
-});
+  function createCanvas() {
+    canvas.innerHTML = "";
+    for (let y = 0; y < HEIGHT; y++) {
+      for (let x = 0; x < WIDTH; x++) {
+        const div = document.createElement("div");
+        div.className = "pixel";
+        div.dataset.x = x;
+        div.dataset.y = y;
+        div.style.background = pixels[y][x];
+
+        div.onclick = () => {
+          const color = colorInput.value;
+          div.style.background = color;
+          socket.emit("draw", { x, y, color });
+        };
+
+        canvas.appendChild(div);
+      }
+    }
+  }
+
+  socket.on("init", (serverPixels) => {
+    pixels = serverPixels;
+    createCanvas();
+  });
+
+  socket.on("draw", ({ x, y, color }) => {
+    const index = y * WIDTH + x;
+    canvas.children[index].style.background = color;
+  });
 </script>
+
 </body>
 </html>
