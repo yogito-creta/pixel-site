@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Yogido Pixel</title>
+<title>Yogito Pixel</title>
 <style>
   body { margin: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   header { height: 40px; line-height: 40px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
@@ -17,7 +17,7 @@
 </head>
 <body>
 
-<header>Yogido pixel</header>
+<header>Yogito Pixel</header>
 <div id="palette"></div>
 
 <div id="wrap">
@@ -33,7 +33,7 @@ const ui = document.getElementById("ui");
 const MAP_SIZE = 2000;
 let scale = 10; 
 let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
-let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2; // 95px (header + palette) payı
+let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
 let currentColor = "#ff0000";
 let pixels = {};
 
@@ -55,7 +55,7 @@ colors.forEach(c => {
 
 function draw() {
   canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - 95; // Üst menülerin toplam yüksekliğini çıkardık
+  canvas.height = window.innerHeight - 95;
   
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -84,12 +84,11 @@ function draw() {
     ctx.stroke();
   }
   ctx.restore();
-  ui.innerText = `Zoom: ${scale.toFixed(1)}x | Koordinat Hatası Giderildi`;
+  ui.innerText = `Zoom: ${scale.toFixed(1)}x | Yogito Pixel`;
 }
 
-// KAYMAYI DÜZELTEN KRİTİK FONKSİYON
 function getPixelPointer(clientX, clientY) {
-  const rect = canvas.getBoundingClientRect(); // Canvas'ın ekrandaki gerçek yerini al
+  const rect = canvas.getBoundingClientRect();
   const x = Math.floor((clientX - rect.left - offsetX) / scale);
   const y = Math.floor((clientY - rect.top - offsetY) / scale);
   return { x, y };
@@ -124,7 +123,6 @@ window.addEventListener("mouseup", e => {
   isDragging = false;
 });
 
-// MOBİL İÇİN DÜZELTME
 window.addEventListener("touchstart", e => {
   if (e.target.id !== "canvas") return;
   if (e.touches.length === 2) {
@@ -141,7 +139,7 @@ window.addEventListener("touchmove", e => {
   if (e.touches.length === 2) {
     const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95; // Mobil koordinat düzeltme
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95;
     const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
     const delta = dist / lastPinchDist;
     scale = Math.min(Math.max(0.5, scale * delta), 60);
