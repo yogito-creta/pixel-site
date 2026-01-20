@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="c" width="400" height="400" style="border:1px solid"></canvas>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const c = document.getElementById("c");
+const ctx = c.getContext("2d");
+
+c.onclick = e => {
+  const x = Math.floor(e.offsetX / 10) * 10;
+  const y = Math.floor(e.offsetY / 10) * 10;
+  socket.emit("pixel", {x,y});
+};
+
+socket.on("pixel", p => {
+  ctx.fillRect(p.x, p.y, 10, 10);
+});
+</script>
+</body>
+</html>
