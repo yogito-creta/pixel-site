@@ -1,40 +1,94 @@
 const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
-
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const PORT = process.env.PORT || 8080;
 
-// Railway bunu SEVİYOR
+let pixels = {}; // kalıcı değil ama refresh'te silinmez
+
+app.use(express.json());
+
 app.get("/", (req, res) => {
-  res.send("Pixel site ayakta lan 😎");
-});
+  res.send(`
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Pixel Site</title>
+<style>
+body {
+  background:#111;
+  color:#fff;
+  font-family:Arial;
+  text-align:center;
+}
+#toolbar {
+  margin:10px;
+}
+canvas {
+  border:2px solid #fff;
+  image-rendering: pixelated;
+}
+</style>
+</head>
+<body>
 
-app.use(express.static("public"));
+<h2>Pixel Site Ayakta Lan 😎</h2>
 
-const WIDTH = 50;
-const HEIGHT = 30;
+<div id="toolbar">
+  Renk:
+  <input type="color" id="color" value="#ff0000">
+</div>
 
-let pixels = Array.from({ length: HEIGHT }, () =>
-  Array.from({ length: WIDTH }, () => "#ffffff")
-);
+<canvas id="canvas" width="400" height="400"></canvas>
 
-io.on("connection", (socket) => {
-  console.log("Biri girdi");
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const size = 10;
 
-  socket.emit("init", pixels);
+function drawAll(data){
+  ctx.clearRect(0,0,400,400);
+  for(const key in data){
+    const [x,y] = key.split(",");
+    ctx.fillStyle = data[key];
+    ctx.fillRect(x*size, y*size, size, size);
+  }
+}
 
-  socket.on("draw", ({ x, y, color }) => {
-    if (pixels[y] && pixels[y][x] !== undefined) {
-      pixels[y][x] = color;
-      socket.broadcast.emit("draw", { x, y, color });
-    }
+fetch("/pixels")
+.then(r=>r.json())
+.then(drawAll);
+
+canvas.addEventListener("click", e=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left)/size);
+  const y = Math.floor((e.clientY - rect.top)/size);
+  const color = document.getElementById("color").value;
+
+  fetch("/pixel",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({x,y,color})
+  }).then(()=>{
+    fetch("/pixels").then(r=>r.json()).then(drawAll);
   });
 });
+</script>
 
-// 🔴 EN KRİTİK SATIRLAR
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, "0.0.0.0", () => {
+</body>
+</html>
+  `);
+});
+
+app.get("/pixels", (req,res)=>{
+  res.json(pixels);
+});
+
+app.post("/pixel", (req,res)=>{
+  const {x,y,color} = req.body;
+  pixels[`${x},${y}`] = color;
+  res.json({ok:true});
+});
+
+app.listen(PORT, ()=>{
   console.log("Server ayakta:", PORT);
 });
