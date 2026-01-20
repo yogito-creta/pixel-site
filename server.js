@@ -1,30 +1,31 @@
 const express = require("express");
-const path = require("path");
+const http = require("http");
+const { Server } = require("socket.io");
+
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-let pixels = {};
+// büyük harita için pixel kayıtları
+let pixels = {}; // { "x,y": color }
 
-app.use(express.json());
-
-// index.html'i ROOT'tan servis et (public yok!)
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+  res.sendFile(__dirname + "/index.html");
 });
 
-// pixel verilerini ver
-app.get("/pixels", (req, res) => {
-  res.json(pixels);
+io.on("connection", (socket) => {
+  // girene tüm tuvali gönder
+  socket.emit("init", pixels);
+
+  socket.on("pixel", (data) => {
+    const key = `${data.x},${data.y}`;
+    pixels[key] = data.color;
+    socket.broadcast.emit("pixel", data);
+  });
 });
 
-// pixel kaydet
-app.post("/pixel", (req, res) => {
-  const { x, y, color } = req.body;
-  pixels[`${x},${y}`] = color;
-  res.json({ ok: true });
-});
-
-app.listen(PORT, () => {
-  console.log("Server ayakta:", PORT);
+server.listen(PORT, () => {
+  console.log("Pixel site ayakta lan 😎");
 });
