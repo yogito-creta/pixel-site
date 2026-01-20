@@ -2,115 +2,139 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Site</title>
-<script src="/socket.io/socket.io.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Pixel World</title>
+
 <style>
-body {
-  margin: 0;
-  background: #111;
-  color: white;
-  overflow: hidden;
-  font-family: Arial;
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
 }
-
-#ui {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  z-index: 10;
-  background: #222;
-  padding: 10px;
-  border-radius: 10px;
+header{
+  padding:10px;
+  text-align:center;
+  background:#111;
+  font-weight:bold;
 }
-
-canvas {
-  background: #000;
-  touch-action: none;
+#palette{
+  display:flex;
+  gap:8px;
+  padding:10px;
+  overflow-x:auto;
+  background:#111;
+}
+.color{
+  width:32px;
+  height:32px;
+  border-radius:8px;
+  border:2px solid #333;
+}
+.color.active{
+  border-color:#fff;
+}
+#wrap{
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+canvas{
+  border:2px solid #222;
+  image-rendering:pixelated;
+  touch-action:none;
 }
 </style>
 </head>
+
 <body>
 
-<div id="ui">
-  <input type="color" id="color" value="#ff0000">
+<header>Selam dostlar siteyi yeni açtım hata olabilir</header>
+
+<div id="palette"></div>
+
+<div id="wrap">
+  <canvas id="canvas" width="1000" height="1000"></canvas>
 </div>
 
-<canvas id="canvas"></canvas>
-
 <script>
-const socket = io();
-
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const size = 10;
+let currentColor = "#ff0000";
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+const colors = [
+  "#ffffff","#000000","#ff0000","#00ff00","#0000ff",
+  "#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"
+];
 
-const GRID = 10;
-let scale = 1;
-let offsetX = 0;
-let offsetY = 0;
-let dragging = false;
-let lastX, lastY;
+const palette = document.getElementById("palette");
 
-const pixels = {};
+colors.forEach(c => {
+  const d = document.createElement("div");
+  d.className = "color";
+  d.style.background = c;
+  if (c === currentColor) d.classList.add("active");
+  d.onclick = () => {
+    currentColor = c;
+    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
+    d.classList.add("active");
+  };
+  palette.appendChild(d);
+});
 
-function draw() {
-  ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
-  ctx.clearRect(-offsetX, -offsetY, canvas.width, canvas.height);
-
-  for (let key in pixels) {
-    const [x, y] = key.split(",").map(Number);
-    ctx.fillStyle = pixels[key];
-    ctx.fillRect(x * GRID, y * GRID, GRID, GRID);
+function drawGrid(){
+  ctx.strokeStyle = "#222";
+  for(let i=0;i<=32;i++){
+    ctx.beginPath();
+    ctx.moveTo(i*size,0);
+    ctx.lineTo(i*size,320);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0,i*size);
+    ctx.lineTo(320,i*size);
+    ctx.stroke();
   }
 }
 
-socket.on("init", (data) => {
-  Object.assign(pixels, data);
-  draw();
-});
-
-socket.on("pixel", (data) => {
-  pixels[`${data.x},${data.y}`] = data.color;
-  draw();
-});
-
-canvas.addEventListener("mousedown", e => {
-  dragging = true;
-  lastX = e.clientX;
-  lastY = e.clientY;
-});
-
-canvas.addEventListener("mouseup", () => dragging = false);
-canvas.addEventListener("mouseleave", () => dragging = false);
-
-canvas.addEventListener("mousemove", e => {
-  if (dragging) {
-    offsetX += e.clientX - lastX;
-    offsetY += e.clientY - lastY;
-    lastX = e.clientX;
-    lastY = e.clientY;
-    draw();
+function drawAll(data){
+  ctx.clearRect(0,0,320,320);
+  for(const k in data){
+    const [x,y] = k.split(",");
+    ctx.fillStyle = data[k];
+    ctx.fillRect(x*size, y*size, size, size);
   }
-});
+  drawGrid();
+}
 
-canvas.addEventListener("wheel", e => {
-  scale += e.deltaY * -0.001;
-  scale = Math.min(Math.max(0.3, scale), 5);
-  draw();
-});
+fetch("/pixels").then(r=>r.json()).then(drawAll);
 
-canvas.addEventListener("click", e => {
+function place(e){
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((e.clientX - offsetX) / (GRID * scale));
-  const y = Math.floor((e.clientY - offsetY) / (GRID * scale));
-  const color = document.getElementById("color").value;
+  const x = Math.floor((e.clientX - rect.left) / size);
+  const y = Math.floor((e.clientY - rect.top) / size);
 
-  pixels[`${x},${y}`] = color;
-  socket.emit("pixel", { x, y, color });
-  draw();
+  // anında çiz
+  ctx.fillStyle = currentColor;
+  ctx.fillRect(x*size, y*size, size, size);
+  drawGrid();
+
+  // server'a gönder
+  fetch("/pixel",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({x,y,color:currentColor})
+  });
+}
+
+canvas.addEventListener("click", place);
+canvas.addEventListener("touchstart", e=>{
+  e.preventDefault();
+  place(e.touches[0]);
 });
 </script>
 
