@@ -3,21 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Pixel World 2.0 - Mobil Destekli</title>
+<title>Pixel World 2.0 - Beyaz Tema</title>
 <style>
-  body { margin: 0; background: #0b0b0b; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  /* Sayfa genel arka planı koyu kalsın ki harita (beyaz) belirgin olsun */
+  body { margin: 0; background: #222; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   header { padding: 10px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
   #palette { display: flex; gap: 8px; padding: 10px; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
   .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
   .color.active { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
-  #wrap { flex: 1; position: relative; overflow: hidden; cursor: crosshair; background: #050505; }
+  #wrap { flex: 1; position: relative; overflow: hidden; cursor: crosshair; background: #333; }
   canvas { image-rendering: pixelated; touch-action: none; }
   #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; border: 1px solid #444; }
 </style>
 </head>
 <body>
 
-<header>Kaydır: Parmak/Sağ Tık | Zoom: İki Parmak/Tekerlek</header>
+<header>Beyaz Tema - Harita: 2000x2000</header>
 <div id="palette"></div>
 
 <div id="wrap">
@@ -30,7 +31,6 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
 
-// --- AYARLAR ---
 const MAP_SIZE = 2000;
 let scale = 10; 
 let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
@@ -40,7 +40,6 @@ let pixels = {};
 
 const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
-// --- PALET OLUŞTURMA ---
 const palette = document.getElementById("palette");
 colors.forEach(c => {
   const d = document.createElement("div");
@@ -55,7 +54,6 @@ colors.forEach(c => {
   palette.appendChild(d);
 });
 
-// --- ÇİZİM FONKSİYONU ---
 function draw() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -65,39 +63,40 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  ctx.fillStyle = "#111";
+  // --- HARİTA ARKA PLANI (BEYAZ) ---
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
 
+  // Pixeller
   for (const key in pixels) {
     const [px, py] = key.split(",");
     ctx.fillStyle = pixels[key];
     ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
 
-  if (scale > 15) {
-    ctx.strokeStyle = "#222";
-    ctx.lineWidth = 1 / scale; 
+  // --- IZGARA ÇİZGİLERİ (GÜMÜŞ/GRİ) ---
+  if (scale > 5) { // 5x zoom'dan sonra görünmeye başlar
+    ctx.strokeStyle = "#ddd"; // Hafif gri çizgiler
+    ctx.lineWidth = 0.5 / scale; 
     ctx.beginPath();
-    for (let i = 0; i <= MAP_SIZE; i += 5) {
+    for (let i = 0; i <= MAP_SIZE; i += 1) { // Her 1 birimde bir çizgi
       ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE);
       ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i);
     }
     ctx.stroke();
   }
+  
   ctx.restore();
   ui.innerText = `Zoom: ${scale.toFixed(1)}x | X: ${Math.floor(-offsetX/scale)} Y: ${Math.floor(-offsetY/scale)}`;
 }
 
-// --- ETKİLEŞİM DEĞİŞKENLERİ ---
 let isDragging = false;
 let lastPos = { x: 0, y: 0 };
 let lastPinchDist = 0;
 let isMoving = false; 
 
-// --- FARE OLAYLARI ---
 window.addEventListener("mousedown", e => {
-  isDragging = true;
-  isMoving = false;
+  isDragging = true; isMoving = false;
   lastPos = { x: e.clientX, y: e.clientY };
 });
 
@@ -120,13 +119,11 @@ window.addEventListener("mouseup", e => {
   isDragging = false;
 });
 
-// --- DOKUNMATİK (MOBİL) OLAYLARI ---
 window.addEventListener("touchstart", e => {
   if (e.touches.length === 2) {
     lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
   } else if (e.touches.length === 1) {
-    isDragging = true;
-    isMoving = false;
+    isDragging = true; isMoving = false;
     lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }
 }, { passive: false });
@@ -138,7 +135,6 @@ window.addEventListener("touchmove", e => {
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
     const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
     const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
-    
     const delta = dist / lastPinchDist;
     scale = Math.min(Math.max(0.5, scale * delta), 60);
     offsetX = midX - worldPos.x * scale;
@@ -179,14 +175,10 @@ function placePixel(x, y) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ x, y, color: currentColor })
-  }).catch(err => console.error("Hata:", err));
+  }).catch(err => console.error(err));
 }
 
-fetch("/pixels").then(r => r.json()).then(data => {
-  pixels = data;
-  draw();
-});
-
+fetch("/pixels").then(r => r.json()).then(data => { pixels = data; draw(); });
 window.addEventListener("resize", draw);
 draw();
 </script>
