@@ -2,33 +2,32 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Pixel World 2.0</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pixel World 2.0 - Mobil Destekli</title>
 <style>
-  body { margin: 0; background: #0b0b0b; color: #fff; font-family: Arial; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  header { padding: 10px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; }
-  #palette { display: flex; gap: 8px; padding: 10px; overflow-x: auto; background: #111; z-index: 10; }
-  .color { width: 32px; height: 32px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
-  .color.active { border-color: #fff; transform: scale(1.1); }
+  body { margin: 0; background: #0b0b0b; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  header { padding: 10px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
+  #palette { display: flex; gap: 8px; padding: 10px; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
+  .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
+  .color.active { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 10px rgba(255,255,255,0.3); }
   #wrap { flex: 1; position: relative; overflow: hidden; cursor: crosshair; background: #050505; }
   canvas { image-rendering: pixelated; touch-action: none; }
-  #ui { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 5px 10px; border-radius: 5px; font-size: 12px; pointer-events: none; }
+  #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; border: 1px solid #444; }
 </style>
 </head>
 <body>
 
-<header>Pixel World - Sürüklemek için SHIFT'e basılı tutun veya Orta Tuş kullanın</header>
+<header>Sürükle: Tek Parmak/Sağ Tık | Zoom: İki Parmak/Tekerlek</header>
 <div id="palette"></div>
 
 <div id="wrap">
   <canvas id="canvas"></canvas>
-  <div id="ui">Zoom: 1x | X: 0 Y: 0</div>
+  <div id="ui">Yükleniyor...</div>
 </div>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
-const wrap = document.getElementById("wrap");
 const ui = document.getElementById("ui");
 
 // --- AYARLAR ---
@@ -66,81 +65,118 @@ function draw() {
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
 
-  // Harita Arka Planı
+  // Arka Plan
   ctx.fillStyle = "#111";
   ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
 
-  // Pixelleri Çiz
+  // Pixeller
   for (const key in pixels) {
-    const [x, y] = key.split(",");
+    const [px, py] = key.split(",");
     ctx.fillStyle = pixels[key];
-    ctx.fillRect(parseInt(x), parseInt(y), 1, 1);
+    ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
 
-  // Izgara (Sadece çok yakındayken)
+  // Izgara (Yakınlaşınca görünür)
   if (scale > 15) {
     ctx.strokeStyle = "#222";
-    ctx.lineWidth = 0.02;
+    ctx.lineWidth = 1 / scale; 
+    ctx.beginPath();
     for (let i = 0; i <= MAP_SIZE; i += 5) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
+      ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE);
+      ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i);
     }
+    ctx.stroke();
   }
   ctx.restore();
-  ui.innerText = `Zoom: ${scale.toFixed(1)}x | Harita: 2000x2000`;
+  ui.innerText = `Zoom: ${scale.toFixed(1)}x | X: ${Math.floor(-offsetX/scale)} Y: ${Math.floor(-offsetY/scale)}`;
 }
 
-// --- KOORDİNAT HESAPLAMA ---
-function getMousePos(e) {
-  const rect = canvas.getBoundingClientRect();
-  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  
-  return {
-    x: Math.floor((clientX - rect.left - offsetX) / scale),
-    y: Math.floor((clientY - rect.top - offsetY) / scale)
-  };
-}
-
-// --- ETKİLEŞİM ---
+// --- ETKİLEŞİM DEĞİŞKENLERİ ---
 let isDragging = false;
-let lastMouse = { x: 0, y: 0 };
+let lastPos = { x: 0, y: 0 };
+let lastPinchDist = 0;
+let isMoving = false; // Tıklama mı sürükleme mi ayrımı için
 
+// --- FARE OLAYLARI ---
 window.addEventListener("mousedown", e => {
-  if (e.button === 1 || (e.button === 0 && e.shiftKey)) {
-    isDragging = true;
-    lastMouse = { x: e.clientX, y: e.clientY };
-  } else if (e.button === 0) {
-    const pos = getMousePos(e);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
-      placePixel(pos.x, pos.y);
-    }
-  }
+  isDragging = true;
+  isMoving = false;
+  lastPos = { x: e.clientX, y: e.clientY };
 });
 
 window.addEventListener("mousemove", e => {
   if (isDragging) {
-    offsetX += e.clientX - lastMouse.x;
-    offsetY += e.clientY - lastMouse.y;
-    lastMouse = { x: e.clientX, y: e.clientY };
+    isMoving = true;
+    offsetX += e.clientX - lastPos.x;
+    offsetY += e.clientY - lastPos.y;
+    lastPos = { x: e.clientX, y: e.clientY };
     draw();
   }
 });
 
-window.addEventListener("mouseup", () => isDragging = false);
+window.addEventListener("mouseup", e => {
+  if (!isMoving && e.button === 0) {
+    const rect = canvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX - offsetX) / scale);
+    const y = Math.floor((e.clientY - offsetY) / scale);
+    if (x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE) placePixel(x, y);
+  }
+  isDragging = false;
+});
 
-// Zoom (Tekerlek)
+// --- DOKUNMATİK (MOBİL) OLAYLARI ---
+window.addEventListener("touchstart", e => {
+  if (e.touches.length === 2) {
+    lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+  } else if (e.touches.length === 1) {
+    isDragging = true;
+    isMoving = false;
+    lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+}, { passive: false });
+
+window.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    // Mobil Zoom
+    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
+    
+    const delta = dist / lastPinchDist;
+    scale = Math.min(Math.max(0.5, scale * delta), 60);
+    offsetX = midX - worldPos.x * scale;
+    offsetY = midY - worldPos.y * scale;
+    lastPinchDist = dist;
+    draw();
+  } else if (e.touches.length === 1 && isDragging) {
+    // Mobil Kaydırma
+    isMoving = true;
+    offsetX += e.touches[0].clientX - lastPos.x;
+    offsetY += e.touches[0].clientY - lastPos.y;
+    lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    draw();
+  }
+}, { passive: false });
+
+window.addEventListener("touchend", e => {
+  // Eğer parmak hareket etmediyse (dokunup çekildiyse) boya
+  if (!isMoving && e.changedTouches.length === 1) {
+    const t = e.changedTouches[0];
+    const x = Math.floor((t.clientX - offsetX) / scale);
+    const y = Math.floor((t.clientY - offsetY) / scale);
+    if (x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE) placePixel(x, y);
+  }
+  isDragging = false;
+});
+
+// Masaüstü Tekerlek Zoom
 window.addEventListener("wheel", e => {
-  const mouseX = e.clientX;
-  const mouseY = e.clientY;
-  const worldPos = { x: (mouseX - offsetX) / scale, y: (mouseY - offsetY) / scale };
-
-  const delta = e.deltaY > 0 ? 0.9 : 1.1;
-  scale *= delta;
-  scale = Math.min(Math.max(0.5, scale), 60); // Sınırlar
-
-  offsetX = mouseX - worldPos.x * scale;
-  offsetY = mouseY - worldPos.y * scale;
+  const worldPos = { x: (e.clientX - offsetX) / scale, y: (e.clientY - offsetY) / scale };
+  scale = Math.min(Math.max(0.5, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 60);
+  offsetX = e.clientX - worldPos.x * scale;
+  offsetY = e.clientY - worldPos.y * scale;
   draw();
 }, { passive: false });
 
@@ -151,12 +187,15 @@ function placePixel(x, y) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ x, y, color: currentColor })
-  });
+  }).catch(err => console.error("Hata:", err));
 }
 
-// Verileri Yükle
+// Başlangıçta verileri çek
 fetch("/pixels").then(r => r.json()).then(data => {
   pixels = data;
+  draw();
+}).catch(() => {
+  ui.innerText = "Sunucuya bağlanılamadı!";
   draw();
 });
 
