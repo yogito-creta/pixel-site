@@ -10,9 +10,20 @@
   #palette { height: 55px; display: flex; gap: 8px; padding: 0 10px; align-items: center; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
   .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
   .color.active { border-color: #fff; transform: scale(1.1); }
+  
   #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
   canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
-  #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; border: 1px solid #444; }
+
+  /* GÖRSELDEKİ BUTONLAR */
+  #controls { position: absolute; bottom: 20px; right: 20px; display: grid; grid-template-columns: repeat(3, 50px); gap: 10px; pointer-events: none; }
+  .btn { width: 50px; height: 50px; background: #d1d5db; border: 2px solid #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; pointer-events: auto; user-select: none; transition: 0.2s; box-shadow: 2px 2px 0px #000; }
+  .btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
+  
+  /* Kalem Butonu Özel Durumu */
+  #btn-pen { grid-column: 1; background: #d1d5db; } 
+  #btn-pen.active { background: #fef08a; box-shadow: 0 0 15px rgba(254, 240, 138, 0.5); }
+
+  #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -22,13 +33,25 @@
 
 <div id="wrap">
   <canvas id="canvas"></canvas>
-  <div id="ui">Yükleniyor...</div>
+  
+  <div id="controls">
+    <div id="btn-pen" class="btn" title="Çizim Modu">✎</div>
+    <div class="btn" onclick="moveMap(0, 50)">↑</div>
+    <div class="btn" onclick="zoomMap(1.2)">+</div>
+    
+    <div class="btn" onclick="moveMap(50, 0)">←</div>
+    <div class="btn" onclick="moveMap(0, -50)">↓</div>
+    <div class="btn" onclick="moveMap(-50, 0)">→</div>
+  </div>
+
+  <div id="ui">Mod: Tekli Koyma</div>
 </div>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
+const btnPen = document.getElementById("btn-pen");
 
 const MAP_SIZE = 2000;
 let scale = 10; 
@@ -36,9 +59,11 @@ let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
 let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
 let currentColor = "#ff0000";
 let pixels = {};
+let isDrawMode = false; // Sarı kalem modu
 
 const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
+// Palet Oluştur
 const palette = document.getElementById("palette");
 colors.forEach(c => {
   const d = document.createElement("div");
@@ -53,130 +78,95 @@ colors.forEach(c => {
   palette.appendChild(d);
 });
 
+// MOD DEĞİŞTİRME (KALEM)
+btnPen.onclick = () => {
+  isDrawMode = !isDrawMode;
+  if (isDrawMode) {
+    btnPen.classList.add("active");
+    ui.innerText = "Mod: Sürükleyerek Çizme (Sarı)";
+  } else {
+    btnPen.classList.remove("active");
+    ui.innerText = "Mod: Tekli Koyma (Gri)";
+  }
+};
+
 function draw() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight - 95;
-  
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
-
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
-
   for (const key in pixels) {
     const [px, py] = key.split(",");
     ctx.fillStyle = pixels[key];
     ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
-
   if (scale > 5) {
-    ctx.strokeStyle = "#e0e0e0"; 
-    ctx.lineWidth = 0.5 / scale;
-    ctx.beginPath();
-    for (let i = 0; i <= MAP_SIZE; i += 1) {
-      ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE);
-      ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i);
-    }
+    ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.5 / scale; ctx.beginPath();
+    for (let i = 0; i <= MAP_SIZE; i += 1) { ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); }
     ctx.stroke();
   }
   ctx.restore();
-  ui.innerText = `Zoom: ${scale.toFixed(1)}x | Yogito Pixel`;
 }
+
+// BUTON FONKSİYONLARI
+window.moveMap = (x, y) => { offsetX += x; offsetY += y; draw(); };
+window.zoomMap = (z) => { scale *= z; draw(); };
 
 function getPixelPointer(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  const x = Math.floor((clientX - rect.left - offsetX) / scale);
-  const y = Math.floor((clientY - rect.top - offsetY) / scale);
-  return { x, y };
+  return {
+    x: Math.floor((clientX - rect.left - offsetX) / scale),
+    y: Math.floor((clientY - rect.top - offsetY) / scale)
+  };
 }
 
 let isDragging = false;
 let lastPos = { x: 0, y: 0 };
-let lastPinchDist = 0;
-let isMoving = false;
 
-window.addEventListener("mousedown", e => {
-  if (e.target.id !== "canvas") return;
-  isDragging = true; isMoving = false;
-  lastPos = { x: e.clientX, y: e.clientY };
-});
-
-window.addEventListener("mousemove", e => {
-  if (isDragging) {
-    if (Math.abs(e.clientX - lastPos.x) > 3 || Math.abs(e.clientY - lastPos.y) > 3) isMoving = true;
-    offsetX += e.clientX - lastPos.x;
-    offsetY += e.clientY - lastPos.y;
-    lastPos = { x: e.clientX, y: e.clientY };
-    draw();
+// ÇİZİM VE HAREKET MANTIĞI
+const handleStart = (x, y) => {
+  isDragging = true;
+  lastPos = { x, y };
+  const pos = getPixelPointer(x, y);
+  if (!isDrawMode && pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
+    placePixel(pos.x, pos.y);
   }
-});
+};
 
-window.addEventListener("mouseup", e => {
-  if (!isMoving && e.button === 0 && e.target.id === "canvas") {
-    const pos = getPixelPointer(e.clientX, e.clientY);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
-  }
-  isDragging = false;
-});
-
-window.addEventListener("touchstart", e => {
-  if (e.target.id !== "canvas") return;
-  if (e.touches.length === 2) {
-    lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+const handleMove = (x, y) => {
+  if (!isDragging) return;
+  if (isDrawMode) {
+    const pos = getPixelPointer(x, y);
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
+      placePixel(pos.x, pos.y);
+    }
   } else {
-    isDragging = true; isMoving = false;
-    lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    offsetX += x - lastPos.x;
+    offsetY += y - lastPos.y;
+    lastPos = { x, y };
+    draw();
   }
-}, { passive: false });
+};
 
-window.addEventListener("touchmove", e => {
-  if (e.target.id !== "canvas") return;
+// Event Listeners
+canvas.addEventListener("mousedown", e => handleStart(e.clientX, e.clientY));
+window.addEventListener("mousemove", e => handleMove(e.clientX, e.clientY));
+window.addEventListener("mouseup", () => isDragging = false);
+
+canvas.addEventListener("touchstart", e => {
   e.preventDefault();
-  if (e.touches.length === 2) {
-    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95;
-    const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
-    const delta = dist / lastPinchDist;
-    scale = Math.min(Math.max(0.5, scale * delta), 60);
-    offsetX = midX - worldPos.x * scale;
-    offsetY = midY - worldPos.y * scale;
-    lastPinchDist = dist;
-    draw();
-  } else if (isDragging) {
-    isMoving = true;
-    offsetX += e.touches[0].clientX - lastPos.x;
-    offsetY += e.touches[0].clientY - lastPos.y;
-    lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    draw();
-  }
+  handleStart(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
-
-window.addEventListener("touchend", e => {
-  if (!isMoving && e.changedTouches.length === 1 && e.target.id === "canvas") {
-    const t = e.changedTouches[0];
-    const pos = getPixelPointer(t.clientX, t.clientY);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
-  }
-  isDragging = false;
-});
-
-window.addEventListener("wheel", e => {
-  const rect = canvas.getBoundingClientRect();
-  const mouseX = e.clientX - rect.left;
-  const mouseY = e.clientY - rect.top;
-  const worldPos = { x: (mouseX - offsetX) / scale, y: (mouseY - offsetY) / scale };
-  scale = Math.min(Math.max(0.5, scale * (e.deltaY > 0 ? 0.9 : 1.1)), 60);
-  offsetX = mouseX - worldPos.x * scale;
-  offsetY = mouseY - worldPos.y * scale;
-  draw();
+window.addEventListener("touchmove", e => {
+  handleMove(e.touches[0].clientX, e.touches[0].clientY);
 }, { passive: false });
+window.addEventListener("touchend", () => isDragging = false);
 
 function placePixel(x, y) {
+  if (pixels[`${x},${y}`] === currentColor) return; // Aynı renkse gönderme
   pixels[`${x},${y}`] = currentColor;
   draw();
   fetch("/pixel", {
