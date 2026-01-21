@@ -1,52 +1,52 @@
 const express = require("express");
 const path = require("path");
-const fs = require("fs"); // Dosya sistemi modülü
+const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MAP_LIMIT = 2000;
 const DB_FILE = "./database.json";
 
 app.use(express.json());
 
-// 1. Sunucu açıldığında dosyadan eski pikselleri yükle
-let pixels = {};
+// Başlangıç verileri
+let data = { pixels: {}, chat: [] };
+
+// Dosyadan yükle
 if (fs.existsSync(DB_FILE)) {
   try {
-    const data = fs.readFileSync(DB_FILE, "utf8");
-    pixels = JSON.parse(data);
-    console.log("Eski pikseller dosyadan yüklendi!");
-  } catch (err) {
-    console.error("Dosya okuma hatası:", err);
-    pixels = {};
-  }
+    const fileData = fs.readFileSync(DB_FILE, "utf8");
+    data = JSON.parse(fileData);
+    if (!data.chat) data.chat = []; // Eski database dosyaları için chat dizisi ekle
+  } catch (err) { console.error("Yükleme hatası:", err); }
 }
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/pixels", (req, res) => res.json(data.pixels));
+app.get("/chat", (req, res) => res.json(data.chat));
 
-app.get("/pixels", (req, res) => {
-  res.json(pixels);
-});
-
+// Pixel Kaydı
 app.post("/pixel", (req, res) => {
   const { x, y, color } = req.body;
-  if (x >= 0 && x < MAP_LIMIT && y >= 0 && y < MAP_LIMIT) {
-    pixels[`${x},${y}`] = color;
-    
-    // 2. Her yeni piksel geldiğinde dosyaya kaydet
-    // (Büyük projelerde bu işlem farklı yapılır ama senin için en basit yol budur)
-    fs.writeFile(DB_FILE, JSON.stringify(pixels), (err) => {
-      if (err) console.error("Kaydetme hatası:", err);
-    });
+  data.pixels[`${x},${y}`] = color;
+  saveToFile();
+  res.json({ ok: true });
+});
 
+// Chat Kaydı
+app.post("/chat", (req, res) => {
+  const { user, msg } = req.body;
+  if (msg) {
+    data.chat.push({ user: user || "Misafir", msg, time: new Date().toLocaleTimeString() });
+    if (data.chat.length > 50) data.chat.shift(); // Son 50 mesajı tut
+    saveToFile();
     res.json({ ok: true });
-  } else {
-    res.status(400).json({ ok: false });
   }
 });
 
-app.listen(PORT, () => {
-  console.log("Yogito Pixel sunucusu kalıcı modda çalışıyor: " + PORT);
-});
-      
+function saveToFile() {
+  fs.writeFile(DB_FILE, JSON.stringify(data), (err) => {
+    if (err) console.error("Kaydetme hatası:", err);
+  });
+}
+
+app.listen(PORT, () => console.log("Yogito Pixel & Chat aktif!"));
+    
