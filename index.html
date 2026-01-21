@@ -14,16 +14,15 @@
   #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
   canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
 
-  /* GÖRSELDEKİ BUTONLAR */
-  #controls { position: absolute; bottom: 20px; right: 20px; display: grid; grid-template-columns: repeat(3, 50px); gap: 10px; pointer-events: none; }
-  .btn { width: 50px; height: 50px; background: #d1d5db; border: 2px solid #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; pointer-events: auto; user-select: none; transition: 0.2s; box-shadow: 2px 2px 0px #000; }
-  .btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
+  /* BUTON PANELI */
+  #controls { position: absolute; bottom: 20px; right: 20px; display: grid; grid-template-columns: repeat(3, 50px); gap: 10px; pointer-events: none; z-index: 20; }
+  .btn { width: 50px; height: 50px; background: #d1d5db; border: 2px solid #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; pointer-events: auto; user-select: none; transition: 0.1s; box-shadow: 2px 2px 0px #000; color: #000; }
+  .btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000; }
   
-  /* Kalem Butonu Özel Durumu */
   #btn-pen { grid-column: 1; background: #d1d5db; } 
-  #btn-pen.active { background: #fef08a; box-shadow: 0 0 15px rgba(254, 240, 138, 0.5); }
+  #btn-pen.active { background: #fef08a; }
 
-  #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; }
+  #ui { position: absolute; bottom: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 8px 12px; border-radius: 8px; font-size: 12px; pointer-events: none; z-index: 20; }
 </style>
 </head>
 <body>
@@ -35,16 +34,15 @@
   <canvas id="canvas"></canvas>
   
   <div id="controls">
-    <div id="btn-pen" class="btn" title="Çizim Modu">✎</div>
-    <div class="btn" onclick="moveMap(0, 50)">↑</div>
-    <div class="btn" onclick="zoomMap(1.2)">+</div>
-    
-    <div class="btn" onclick="moveMap(50, 0)">←</div>
-    <div class="btn" onclick="moveMap(0, -50)">↓</div>
-    <div class="btn" onclick="moveMap(-50, 0)">→</div>
+    <div id="btn-pen" class="btn">✎</div>
+    <div class="btn" id="btn-up">↑</div>
+    <div class="btn" id="btn-zoom-in">+</div>
+    <div class="btn" id="btn-left">←</div>
+    <div class="btn" id="btn-down">↓</div>
+    <div class="btn" id="btn-right">→</div>
   </div>
 
-  <div id="ui">Mod: Tekli Koyma</div>
+  <div id="ui">Yükleniyor...</div>
 </div>
 
 <script>
@@ -59,7 +57,7 @@ let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
 let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
 let currentColor = "#ff0000";
 let pixels = {};
-let isDrawMode = false; // Sarı kalem modu
+let isDrawMode = false; 
 
 const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
@@ -78,16 +76,12 @@ colors.forEach(c => {
   palette.appendChild(d);
 });
 
-// MOD DEĞİŞTİRME (KALEM)
-btnPen.onclick = () => {
+// Kalem Modu
+btnPen.onclick = (e) => {
+  e.stopPropagation();
   isDrawMode = !isDrawMode;
-  if (isDrawMode) {
-    btnPen.classList.add("active");
-    ui.innerText = "Mod: Sürükleyerek Çizme (Sarı)";
-  } else {
-    btnPen.classList.remove("active");
-    ui.innerText = "Mod: Tekli Koyma (Gri)";
-  }
+  btnPen.classList.toggle("active", isDrawMode);
+  ui.innerText = isDrawMode ? "Mod: Çizim (Sarı)" : "Mod: Gezinti (Gri)";
 };
 
 function draw() {
@@ -111,9 +105,12 @@ function draw() {
   ctx.restore();
 }
 
-// BUTON FONKSİYONLARI
-window.moveMap = (x, y) => { offsetX += x; offsetY += y; draw(); };
-window.zoomMap = (z) => { scale *= z; draw(); };
+// Butonlarla Gezinti
+document.getElementById("btn-up").onclick = () => { offsetY += 50; draw(); };
+document.getElementById("btn-down").onclick = () => { offsetY -= 50; draw(); };
+document.getElementById("btn-left").onclick = () => { offsetX += 50; draw(); };
+document.getElementById("btn-right").onclick = () => { offsetX -= 50; draw(); };
+document.getElementById("btn-zoom-in").onclick = () => { scale *= 1.2; draw(); };
 
 function getPixelPointer(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
@@ -125,24 +122,23 @@ function getPixelPointer(clientX, clientY) {
 
 let isDragging = false;
 let lastPos = { x: 0, y: 0 };
+let lastPinchDist = 0;
 
-// ÇİZİM VE HAREKET MANTIĞI
-const handleStart = (x, y) => {
+// HEM ELLE HEM BUTONLA GEZİNTİ + ÇİZİM
+const startHook = (x, y) => {
   isDragging = true;
   lastPos = { x, y };
-  const pos = getPixelPointer(x, y);
-  if (!isDrawMode && pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
-    placePixel(pos.x, pos.y);
+  if (!isDrawMode) {
+    const pos = getPixelPointer(x, y);
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
   }
 };
 
-const handleMove = (x, y) => {
+const moveHook = (x, y) => {
   if (!isDragging) return;
   if (isDrawMode) {
     const pos = getPixelPointer(x, y);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) {
-      placePixel(pos.x, pos.y);
-    }
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
   } else {
     offsetX += x - lastPos.x;
     offsetY += y - lastPos.y;
@@ -151,32 +147,67 @@ const handleMove = (x, y) => {
   }
 };
 
-// Event Listeners
-canvas.addEventListener("mousedown", e => handleStart(e.clientX, e.clientY));
-window.addEventListener("mousemove", e => handleMove(e.clientX, e.clientY));
+// Mouse
+canvas.addEventListener("mousedown", e => startHook(e.clientX, e.clientY));
+window.addEventListener("mousemove", e => moveHook(e.clientX, e.clientY));
 window.addEventListener("mouseup", () => isDragging = false);
 
-canvas.addEventListener("touchstart", e => {
-  e.preventDefault();
-  handleStart(e.touches[0].clientX, e.touches[0].clientY);
-}, { passive: false });
-window.addEventListener("touchmove", e => {
-  handleMove(e.touches[0].clientX, e.touches[0].clientY);
-}, { passive: false });
-window.addEventListener("touchend", () => isDragging = false);
-
-function placePixel(x, y) {
-  if (pixels[`${x},${y}`] === currentColor) return; // Aynı renkse gönderme
-  pixels[`${x},${y}`] = currentColor;
+// Zoom (Tekerlek)
+canvas.addEventListener("wheel", e => {
+  const rect = canvas.getBoundingClientRect();
+  const worldPos = { x: (e.clientX - rect.left - offsetX) / scale, y: (e.clientY - rect.top - offsetY) / scale };
+  scale = Math.max(0.5, Math.min(60, scale * (e.deltaY > 0 ? 0.9 : 1.1)));
+  offsetX = (e.clientX - rect.left) - worldPos.x * scale;
+  offsetY = (e.clientY - rect.top) - worldPos.y * scale;
   draw();
+}, { passive: false });
+
+// Dokunmatik (Mobil Elle Gezme ve İki Parmak Zoom)
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length === 2) {
+    isDragging = false;
+    lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+  } else {
+    startHook(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95;
+    const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
+    scale = Math.max(0.5, Math.min(60, scale * (dist / lastPinchDist)));
+    offsetX = midX - worldPos.x * scale;
+    offsetY = midY - worldPos.y * scale;
+    lastPinchDist = dist;
+    draw();
+  } else {
+    moveHook(e.touches[0].clientX, e.touches[0].clientY);
+  }
+}, { passive: false });
+
+canvas.addEventListener("touchend", () => isDragging = false);
+
+// KAYIT İŞLEMİ
+function placePixel(x, y) {
+  const key = `${x},${y}`;
+  if (pixels[key] === currentColor) return;
+  pixels[key] = currentColor;
+  draw();
+  
   fetch("/pixel", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ x, y, color: currentColor })
-  }).catch(err => console.error(err));
+  }).then(res => {
+    if(!res.ok) console.error("Sunucu kayıt hatası");
+  }).catch(err => console.error("Bağlantı hatası:", err));
 }
 
-fetch("/pixels").then(r => r.json()).then(data => { pixels = data; draw(); });
+fetch("/pixels").then(r => r.json()).then(data => { pixels = data; draw(); ui.innerText = "Yogito Pixel Hazır"; });
 window.addEventListener("resize", draw);
 draw();
 </script>
