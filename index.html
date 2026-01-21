@@ -14,16 +14,11 @@
   #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
   canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
 
+  /* BUTON PANELI (SAĞ ORTA) */
   #controls { 
-    position: absolute; 
-    right: 15px; 
-    top: 50%; 
-    transform: translateY(-50%);
-    display: grid; 
-    grid-template-columns: repeat(2, 45px);
-    gap: 8px; 
-    pointer-events: none; 
-    z-index: 20; 
+    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+    display: grid; grid-template-columns: repeat(2, 45px); gap: 8px; 
+    pointer-events: none; z-index: 20; 
   }
   .btn { 
     width: 45px; height: 45px; background: #d1d5db; border: 2px solid #000; border-radius: 10px; 
@@ -34,7 +29,20 @@
   .btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000; }
   #btn-pen.active { background: #fef08a; }
 
-  #ui { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.7); padding: 5px 10px; border-radius: 5px; font-size: 11px; pointer-events: none; z-index: 20; }
+  /* CHAT KUTUSU (SOL ALT) */
+  #chat-box {
+    position: absolute; bottom: 50px; left: 15px; width: 220px; height: 180px;
+    background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px;
+    display: flex; flex-direction: column; z-index: 30; overflow: hidden;
+  }
+  #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 12px; color: #ddd; scroll-behavior: smooth; }
+  #chat-input-area { display: flex; border-top: 1px solid #444; background: #222; }
+  #chat-input { flex: 1; background: transparent; border: none; color: white; padding: 8px; font-size: 12px; outline: none; }
+  #chat-send { background: #333; border: none; color: white; padding: 0 12px; cursor: pointer; font-weight: bold; }
+  .msg-item { margin-bottom: 6px; word-break: break-word; line-height: 1.4; }
+  .msg-user { font-weight: bold; color: #fef08a; margin-right: 4px; }
+
+  #ui { position: absolute; bottom: 10px; left: 15px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 20; color: #aaa; }
 </style>
 </head>
 <body>
@@ -44,6 +52,7 @@
 
 <div id="wrap">
   <canvas id="canvas"></canvas>
+  
   <div id="controls">
     <div id="btn-pen" class="btn">✎</div>
     <div class="btn" id="btn-zoom-in">+</div>
@@ -53,7 +62,16 @@
     <div class="btn" id="btn-right">→</div>
     <div class="btn" style="grid-column: span 2;" id="btn-down">↓</div>
   </div>
-  <div id="ui">Yükleniyor...</div>
+
+  <div id="chat-box">
+    <div id="chat-messages"></div>
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Mesaj yaz..." maxlength="50">
+      <button id="chat-send">></button>
+    </div>
+  </div>
+
+  <div id="ui">Bağlanıyor...</div>
 </div>
 
 <script>
@@ -61,6 +79,9 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const ui = document.getElementById("ui");
 const btnPen = document.getElementById("btn-pen");
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const chatSend = document.getElementById("chat-send");
 
 const MAP_SIZE = 2000;
 let scale = 10; 
@@ -69,6 +90,7 @@ let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
 let currentColor = "#ff0000";
 let pixels = {};
 let isDrawMode = false; 
+let lastChatJson = "";
 
 const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
@@ -89,7 +111,7 @@ btnPen.onclick = (e) => {
   e.stopPropagation();
   isDrawMode = !isDrawMode;
   btnPen.classList.toggle("active", isDrawMode);
-  ui.innerText = isDrawMode ? "Mod: Çizim" : "Mod: Gezinti";
+  ui.innerText = isDrawMode ? "Mod: Çizim (Sarı)" : "Mod: Gezinti (Gri)";
 };
 
 function draw() {
@@ -164,6 +186,7 @@ canvas.addEventListener("touchstart", e => {
 }, { passive: false });
 
 canvas.addEventListener("touchmove", e => {
+  if (e.target.id !== "canvas") return;
   e.preventDefault();
   if (e.touches.length === 2) {
     const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
@@ -190,21 +213,48 @@ function placePixel(x, y) {
   });
 }
 
-// CANLI SENKRONİZASYON (2 Saniyede bir)
-async function syncPixels() {
+// CHAT FONKSİYONLARI
+async function sendChat() {
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+  chatInput.value = "";
+  await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ msg, user: "Oyuncu" })
+  });
+  syncAll();
+}
+
+chatSend.onclick = sendChat;
+chatInput.onkeydown = (e) => { if(e.key === "Enter") sendChat(); };
+
+// CANLI SENKRONİZASYON (Hem Pixel Hem Chat)
+async function syncAll() {
   try {
-    const r = await fetch("/pixels");
-    const data = await r.json();
-    if (JSON.stringify(data) !== JSON.stringify(pixels)) {
-      pixels = data;
-      draw();
+    const pr = await fetch("/pixels");
+    const pData = await pr.json();
+    if (JSON.stringify(pData) !== JSON.stringify(pixels)) {
+      pixels = pData; draw();
     }
-    ui.innerText = "Canlı: Yogito Pixel";
+
+    const cr = await fetch("/chat");
+    const cData = await cr.json();
+    if (JSON.stringify(cData) !== lastChatJson) {
+      lastChatJson = JSON.stringify(cData);
+      chatMessages.innerHTML = cData.map(m => `
+        <div class="msg-item">
+          <span class="msg-user">${m.user}:</span> ${m.msg}
+        </div>
+      `).join("");
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    ui.innerText = "Canlı: Yogito Pixel & Chat";
   } catch (e) { console.error("Sync hatası"); }
 }
 
-setInterval(syncPixels, 2000); // 2 saniyede bir kontrol et
-syncPixels(); // İlk açılışta veriyi çek
+setInterval(syncAll, 2000);
+syncAll();
 window.addEventListener("resize", draw);
 </script>
 </body>
