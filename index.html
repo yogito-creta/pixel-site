@@ -6,204 +6,256 @@
 <title>Yogito Pixel</title>
 <style>
   body { margin: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  header { height: 40px; line-height: 40px; text-align: center; background: #111; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; display: flex; justify-content: space-between; padding: 0 15px; }
-  #palette { height: 55px; display: flex; gap: 8px; padding: 0 10px; align-items: center; overflow-x: auto; background: #111; border-bottom: 1px solid #222; }
+  header { height: 40px; line-height: 40px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
+  #palette { height: 55px; display: flex; gap: 8px; padding: 0 10px; align-items: center; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
   .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
   .color.active { border-color: #fff; transform: scale(1.1); }
   
   #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
   canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
 
-  /* KORDİNAT ÇUBUĞU */
-  #coord-bar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 8px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #555; z-index: 40; }
-  #coord-bar:active { background: #333; }
+  /* BUTON PANELI (SAĞ ORTA) */
+  #controls { 
+    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+    display: grid; grid-template-columns: repeat(2, 45px); gap: 8px; 
+    pointer-events: none; z-index: 20; 
+  }
+  .btn { 
+    width: 45px; height: 45px; background: #d1d5db; border: 2px solid #000; border-radius: 10px; 
+    display: flex; align-items: center; justify-content: center; font-size: 20px; 
+    cursor: pointer; pointer-events: auto; user-select: none; transition: 0.1s; 
+    box-shadow: 2px 2px 0px #000; color: #000; 
+  }
+  .btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000; }
+  #btn-pen.active { background: #fef08a; }
 
-  /* BUTONLAR */
-  #controls { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: grid; grid-template-columns: repeat(2, 45px); gap: 8px; z-index: 20; pointer-events: none; }
-  .btn { width: 45px; height: 45px; background: #d1d5db; border: 2px solid #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; pointer-events: auto; box-shadow: 2px 2px 0px #000; color: #000; }
-  #btn-pen.mode-draw { background: #fef08a; } /* Sarı */
-  #btn-pen.mode-auto { background: #f87171; } /* Kırmızı */
+  /* CHAT KUTUSU (SOL ALT) */
+  #chat-box {
+    position: absolute; bottom: 50px; left: 15px; width: 220px; height: 180px;
+    background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px;
+    display: flex; flex-direction: column; z-index: 30; overflow: hidden;
+  }
+  #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 12px; color: #ddd; scroll-behavior: smooth; }
+  #chat-input-area { display: flex; border-top: 1px solid #444; background: #222; }
+  #chat-input { flex: 1; background: transparent; border: none; color: white; padding: 8px; font-size: 12px; outline: none; }
+  #chat-send { background: #333; border: none; color: white; padding: 0 12px; cursor: pointer; font-weight: bold; }
+  .msg-item { margin-bottom: 6px; word-break: break-word; line-height: 1.4; }
+  .msg-user { font-weight: bold; color: #fef08a; margin-right: 4px; }
 
-  /* AYARLAR PANELİ */
-  #settings-panel { position: absolute; top: 50px; right: 15px; width: 200px; background: rgba(0,0,0,0.9); border: 1px solid #444; padding: 15px; border-radius: 10px; display: none; z-index: 50; font-size: 12px; }
-  #settings-panel input { width: 100%; margin-bottom: 10px; background: #222; border: 1px solid #444; color: white; padding: 5px; }
-
-  #chat-box { position: absolute; bottom: 50px; left: 15px; width: 200px; height: 150px; background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 8px; display: flex; flex-direction: column; z-index: 30; }
-  #chat-messages { flex: 1; overflow-y: auto; padding: 5px; font-size: 11px; }
+  #ui { position: absolute; bottom: 10px; left: 15px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 20; color: #aaa; }
 </style>
 </head>
 <body>
 
-<header>
-  <span>Yogito Pixel</span>
-  <span style="cursor:pointer" onclick="toggleSettings()">⚙️ Ayarlar</span>
-</header>
+<header>Yogito Pixel</header>
 <div id="palette"></div>
 
 <div id="wrap">
   <canvas id="canvas"></canvas>
   
-  <div id="settings-panel">
-    <strong>Şablon Yükle</strong>
-    <input type="file" id="tpl-file" accept="image/*">
-    X: <input type="number" id="tpl-x" value="0">
-    Y: <input type="number" id="tpl-y" value="0">
-    <button onclick="clearTemplate()" style="width:100%">Şablonu Kaldır</button>
-  </div>
-
   <div id="controls">
     <div id="btn-pen" class="btn">✎</div>
-    <div class="btn" onclick="zoomMap(1.2)">+</div>
-    <div class="btn" onclick="moveMap(0, 60)">↑</div>
-    <div class="btn" onclick="zoomMap(0.8)">−</div>
-    <div class="btn" onclick="moveMap(60, 0)">←</div>
-    <div class="btn" onclick="moveMap(-60, 0)">→</div>
-    <div class="btn" style="grid-column: span 2;" onclick="moveMap(0, -60)">↓</div>
+    <div class="btn" id="btn-zoom-in">+</div>
+    <div class="btn" id="btn-up">↑</div>
+    <div class="btn" id="btn-zoom-out">−</div>
+    <div class="btn" id="btn-left">←</div>
+    <div class="btn" id="btn-right">→</div>
+    <div class="btn" style="grid-column: span 2;" id="btn-down">↓</div>
   </div>
-
-  <div id="coord-bar" onclick="copyCoords()">Son Pixel: <span id="coords">0, 0</span> (Kopyala)</div>
 
   <div id="chat-box">
     <div id="chat-messages"></div>
-    <div style="display:flex; border-top:1px solid #444">
-      <input type="text" id="chat-input" style="flex:1; background:transparent; border:none; color:white; padding:5px; outline:none" placeholder="Chat...">
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Mesaj yaz..." maxlength="50">
+      <button id="chat-send">></button>
     </div>
   </div>
+
+  <div id="ui">Bağlanıyor...</div>
 </div>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
 const btnPen = document.getElementById("btn-pen");
-const coordsEl = document.getElementById("coords");
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const chatSend = document.getElementById("chat-send");
 
 const MAP_SIZE = 2000;
-let scale = 10, offsetX = 0, offsetY = 0;
+let scale = 10; 
+let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
+let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
 let currentColor = "#ff0000";
 let pixels = {};
-let penMode = 0; // 0: Gezinti, 1: Sarı (Sürükle), 2: Kırmızı (Şablon Oto)
-let template = { img: null, x: 0, y: 0, data: null };
+let isDrawMode = false; 
+let lastChatJson = "";
 
 const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
-// Palet Ayarı
 const palette = document.getElementById("palette");
 colors.forEach(c => {
   const d = document.createElement("div");
   d.className = "color"; d.style.background = c;
-  d.onclick = () => { currentColor = c; document.querySelectorAll(".color").forEach(x=>x.classList.remove("active")); d.classList.add("active"); };
+  if (c === currentColor) d.classList.add("active");
+  d.onclick = () => {
+    currentColor = c;
+    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
+    d.classList.add("active");
+  };
   palette.appendChild(d);
 });
 
-// Kalem Modu Döngüsü
-btnPen.onclick = () => {
-  penMode = (penMode + 1) % 3;
-  btnPen.className = "btn";
-  if(penMode === 1) btnPen.classList.add("mode-draw");
-  if(penMode === 2) btnPen.classList.add("mode-auto");
-};
-
-function toggleSettings() {
-  const p = document.getElementById("settings-panel");
-  p.style.display = p.style.display === "block" ? "none" : "block";
-}
-
-// Şablon İşleme
-document.getElementById("tpl-file").onchange = function(e) {
-  const reader = new FileReader();
-  reader.onload = function(event) {
-    const img = new Image();
-    img.onload = function() {
-      template.img = img;
-      // Resim renklerini analiz etmek için gizli canvas
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = img.width; tempCanvas.height = img.height;
-      const tCtx = tempCanvas.getContext('2d');
-      tCtx.drawImage(img, 0, 0);
-      template.data = tCtx.getImageData(0, 0, img.width, img.height).data;
-      draw();
-    };
-    img.src = event.target.result;
-  };
-  reader.readAsDataURL(e.target.files[0]);
+btnPen.onclick = (e) => {
+  e.stopPropagation();
+  isDrawMode = !isDrawMode;
+  btnPen.classList.toggle("active", isDrawMode);
+  ui.innerText = isDrawMode ? "Mod: Çizim (Sarı)" : "Mod: Gezinti (Gri)";
 };
 
 function draw() {
-  canvas.width = window.innerWidth; canvas.height = window.innerHeight - 95;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 95;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
-
-  // Şablonu Çiz
-  if (template.img) {
-    ctx.globalAlpha = 0.3;
-    const tx = parseInt(document.getElementById("tpl-x").value);
-    const ty = parseInt(document.getElementById("tpl-y").value);
-    template.x = tx; template.y = ty;
-    ctx.drawImage(template.img, tx, ty, template.img.width, template.img.height);
-    ctx.globalAlpha = 1.0;
-  }
-
-  // Pikselleri Çiz
   for (const key in pixels) {
     const [px, py] = key.split(",");
     ctx.fillStyle = pixels[key];
     ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
+  if (scale > 5) {
+    ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.5 / scale; ctx.beginPath();
+    for (let i = 0; i <= MAP_SIZE; i += 1) { ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); }
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
-function placePixel(x, y) {
-  let colorToPlace = currentColor;
+// Buton Kontrolleri
+document.getElementById("btn-up").onclick = () => { offsetY += 60; draw(); };
+document.getElementById("btn-down").onclick = () => { offsetY -= 60; draw(); };
+document.getElementById("btn-left").onclick = () => { offsetX += 60; draw(); };
+document.getElementById("btn-right").onclick = () => { offsetX -= 60; draw(); };
+document.getElementById("btn-zoom-in").onclick = () => { scale *= 1.2; draw(); };
+document.getElementById("btn-zoom-out").onclick = () => { scale /= 1.2; draw(); };
 
-  // Kırmızı Kalem Modu (Oto Şablon)
-  if (penMode === 2 && template.img) {
-    const relX = x - template.x;
-    const relY = y - template.y;
-    if (relX >= 0 && relX < template.img.width && relY >= 0 && relY < template.img.height) {
-      const idx = (relY * template.img.width + relX) * 4;
-      const r = template.data[idx], g = template.data[idx+1], b = template.data[idx+2];
-      colorToPlace = `rgb(${r},${g},${b})`; // En yakın rengi bulma algoritması da eklenebilir
-    } else return;
-  }
-
-  const key = `${x},${y}`;
-  if (pixels[key] === colorToPlace) return;
-  pixels[key] = colorToPlace;
-  coordsEl.innerText = `${x}, ${y}`;
-  draw();
-  fetch("/pixel", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({x, y, color: colorToPlace}) });
-}
-
-function copyCoords() {
-  navigator.clipboard.writeText(coordsEl.innerText);
-  alert("Koordinat kopyalandı: " + coordsEl.innerText);
-}
-
-// Hareket ve Zoom
-window.moveMap = (x, y) => { offsetX += x; offsetY += y; draw(); };
-window.zoomMap = (z) => { scale *= z; draw(); };
-
-// Dokunmatik ve Fare İşlemleri (Önceki kodun aynısı, placePixel fonksiyonu entegreli)
-let isDragging = false, lastPos = {x:0, y:0};
-canvas.onmousedown = (e) => { isDragging = true; lastPos = {x: e.clientX, y: e.clientY}; if(penMode === 0) { const p = getPixelPointer(e.clientX, e.clientY); placePixel(p.x, p.y); } };
-window.onmousemove = (e) => {
-  if(!isDragging) return;
-  if(penMode > 0) { const p = getPixelPointer(e.clientX, e.clientY); placePixel(p.x, p.y); }
-  else { offsetX += e.clientX - lastPos.x; offsetY += e.clientY - lastPos.y; lastPos = {x: e.clientX, y: e.clientY}; draw(); }
-};
-window.onmouseup = () => isDragging = false;
-
-function getPixelPointer(cx, cy) {
+function getPixelPointer(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
-  return { x: Math.floor((cx - rect.left - offsetX) / scale), y: Math.floor((cy - rect.top - offsetY) / scale) };
+  return {
+    x: Math.floor((clientX - rect.left - offsetX) / scale),
+    y: Math.floor((clientY - rect.top - offsetY) / scale)
+  };
 }
 
-function sync() { fetch("/pixels").then(r => r.json()).then(data => { pixels = data; draw(); }); }
-setInterval(sync, 2000);
-sync();
-window.onresize = draw;
-draw();
+let isDragging = false;
+let lastPos = { x: 0, y: 0 };
+let lastPinchDist = 0;
+
+const startHook = (x, y) => {
+  isDragging = true; lastPos = { x, y };
+  if (!isDrawMode) {
+    const pos = getPixelPointer(x, y);
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
+  }
+};
+
+const moveHook = (x, y) => {
+  if (!isDragging) return;
+  if (isDrawMode) {
+    const pos = getPixelPointer(x, y);
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
+  } else {
+    offsetX += x - lastPos.x; offsetY += y - lastPos.y;
+    lastPos = { x, y }; draw();
+  }
+};
+
+canvas.addEventListener("mousedown", e => startHook(e.clientX, e.clientY));
+window.addEventListener("mousemove", e => moveHook(e.clientX, e.clientY));
+window.addEventListener("mouseup", () => isDragging = false);
+
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length === 2) {
+    isDragging = false;
+    lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+  } else { startHook(e.touches[0].clientX, e.touches[0].clientY); }
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  if (e.target.id !== "canvas") return;
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95;
+    const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
+    scale = Math.max(0.5, Math.min(60, scale * (dist / lastPinchDist)));
+    offsetX = midX - worldPos.x * scale; offsetY = midY - worldPos.y * scale;
+    lastPinchDist = dist; draw();
+  } else { moveHook(e.touches[0].clientX, e.touches[0].clientY); }
+}, { passive: false });
+
+canvas.addEventListener("touchend", () => isDragging = false);
+
+function placePixel(x, y) {
+  const key = `${x},${y}`;
+  if (pixels[key] === currentColor) return;
+  pixels[key] = currentColor;
+  draw();
+  fetch("/pixel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ x, y, color: currentColor })
+  });
+}
+
+// CHAT FONKSİYONLARI
+async function sendChat() {
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+  chatInput.value = "";
+  await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ msg, user: "Oyuncu" })
+  });
+  syncAll();
+}
+
+chatSend.onclick = sendChat;
+chatInput.onkeydown = (e) => { if(e.key === "Enter") sendChat(); };
+
+// CANLI SENKRONİZASYON (Hem Pixel Hem Chat)
+async function syncAll() {
+  try {
+    const pr = await fetch("/pixels");
+    const pData = await pr.json();
+    if (JSON.stringify(pData) !== JSON.stringify(pixels)) {
+      pixels = pData; draw();
+    }
+
+    const cr = await fetch("/chat");
+    const cData = await cr.json();
+    if (JSON.stringify(cData) !== lastChatJson) {
+      lastChatJson = JSON.stringify(cData);
+      chatMessages.innerHTML = cData.map(m => `
+        <div class="msg-item">
+          <span class="msg-user">${m.user}:</span> ${m.msg}
+        </div>
+      `).join("");
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    ui.innerText = "Canlı: Yogito Pixel & Chat";
+  } catch (e) { console.error("Sync hatası"); }
+}
+
+setInterval(syncAll, 2000);
+syncAll();
+window.addEventListener("resize", draw);
 </script>
 </body>
 </html>
