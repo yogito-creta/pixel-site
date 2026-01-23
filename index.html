@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Yogito Pixel</title>
+<title>Yogito Pixel / Bayrak İnmez</title>
 <style>
   body { margin: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
   header { height: 40px; line-height: 40px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
@@ -49,7 +49,7 @@
 
 <header style="display:flex;align-items:center;justify-content:center;gap:8px;">
   <img src="https://i.imgur.com/WU82uOE.jpeg" style="height:24px;border-radius:4px;">
-  Yogito Pixel
+  Yogito Pixel / Bayrak İnmez 🇹🇷
 </header>
 <div id="palette"></div>
 
@@ -224,7 +224,7 @@ async function sendChat() {
   await fetch("/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ msg, user: "Oyuncu" })
+    body: JSON.stringify({ msg, user: "Oyuncu / Bayrak İnmez 🇹🇷" })
   });
   syncAll();
 }
