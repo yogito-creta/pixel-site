@@ -12,26 +12,26 @@
   .color.active { border-color: #fff; transform: scale(1.1); }
   #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
   canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
+  
+  /* Butonlar */
   #controls { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: grid; grid-template-columns: repeat(2, 45px); gap: 8px; pointer-events: none; z-index: 20; }
   .btn { width: 45px; height: 45px; background: #d1d5db; border: 2px solid #000; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; pointer-events: auto; user-select: none; transition: 0.1s; box-shadow: 2px 2px 0px #000; color: #000; }
   .btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000; }
   #btn-pen.active { background: #fef08a; }
+
+  /* Chat */
   #chat-box { position: absolute; bottom: 50px; left: 15px; width: 220px; height: 180px; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px; display: flex; flex-direction: column; z-index: 30; overflow: hidden; }
-  #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 12px; color: #ddd; scroll-behavior: smooth; }
+  #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 12px; color: #ddd; }
   #chat-input-area { display: flex; border-top: 1px solid #444; background: #222; }
   #chat-input { flex: 1; background: transparent; border: none; color: white; padding: 8px; font-size: 12px; outline: none; }
-  #chat-send { background: #333; border: none; color: white; padding: 0 12px; cursor: pointer; font-weight: bold; }
-  .msg-item { margin-bottom: 6px; word-break: break-word; line-height: 1.4; }
-  .msg-user { font-weight: bold; color: #fef08a; margin-right: 4px; }
+  #chat-send { background: #333; border: none; color: white; padding: 0 12px; cursor: pointer; }
+  
   #ui { position: absolute; bottom: 10px; left: 15px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 20; color: #aaa; }
 </style>
 </head>
 <body>
 
-<header style="display:flex;align-items:center;justify-content:center;gap:8px;">
-  <img src="https://i.imgur.com/WU82uOE.jpeg" style="height:24px;border-radius:4px;">
-  Yogito Pixel / Bayrak İnmez 🇹🇷
-</header>
+<header>Yogito Pixel / Bayrak İnmez 🇹🇷</header>
 <div id="palette"></div>
 
 <div id="wrap">
@@ -62,7 +62,6 @@ const ui = document.getElementById("ui");
 const btnPen = document.getElementById("btn-pen");
 const chatMessages = document.getElementById("chat-messages");
 const chatInput = document.getElementById("chat-input");
-const chatSend = document.getElementById("chat-send");
 
 const MAP_SIZE = 2000;
 let scale = 10; 
@@ -71,11 +70,13 @@ let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
 let currentColor = "#ff0000";
 let pixels = {};
 let isDrawMode = false; 
-let isLockedMode = false; // /yogidogi kontrolü
-let lastChatJson = "";
+let isLockedMode = false;
+let isDragging = false;
+let lastPos = { x: 0, y: 0 };
 
 const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
+// Palette Oluşturma
 const palette = document.getElementById("palette");
 colors.forEach(c => {
   const d = document.createElement("div");
@@ -89,52 +90,49 @@ colors.forEach(c => {
   palette.appendChild(d);
 });
 
+// Kalem Modu
 btnPen.onclick = (e) => {
   e.stopPropagation();
   isDrawMode = !isDrawMode;
   btnPen.classList.toggle("active", isDrawMode);
-  updateUIStatus();
+  updateUI();
 };
 
-function updateUIStatus() {
-  let modeText = isDrawMode ? "Çizim" : "Gezinti";
-  if (isLockedMode) modeText += " + KORUMA";
-  ui.innerText = "Mod: " + modeText;
+function updateUI() {
+  ui.innerText = `Mod: ${isDrawMode ? 'Çizim' : 'Gezinti'} ${isLockedMode ? '(KORUMA)' : ''}`;
 }
 
+// Çizim Fonksiyonu
 function draw() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight - 95;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
   ctx.translate(offsetX, offsetY);
   ctx.scale(scale, scale);
   
+  // Pikselleri Çiz
   for (const key in pixels) {
     const [px, py] = key.split(",");
     const pData = pixels[key];
-    // Gelen veri obje olabilir (yeni sistem) veya düz renk olabilir (eski sistem)
     ctx.fillStyle = (typeof pData === 'object') ? pData.color : pData;
     ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
   }
   
+  // Izgara Çiz
   if (scale > 5) {
-    ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.5 / scale; ctx.beginPath();
-    for (let i = 0; i <= MAP_SIZE; i += 1) { ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); }
+    ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.2 / scale; ctx.beginPath();
+    for (let i = 0; i <= MAP_SIZE; i += 5) { 
+      ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); 
+      ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); 
+    }
     ctx.stroke();
   }
   ctx.restore();
 }
 
-document.getElementById("btn-up").onclick = () => { offsetY += 60; draw(); };
-document.getElementById("btn-down").onclick = () => { offsetY -= 60; draw(); };
-document.getElementById("btn-left").onclick = () => { offsetX += 60; draw(); };
-document.getElementById("btn-right").onclick = () => { offsetX -= 60; draw(); };
-document.getElementById("btn-zoom-in").onclick = () => { scale *= 1.2; draw(); };
-document.getElementById("btn-zoom-out").onclick = () => { scale /= 1.2; draw(); };
-
-function getPixelPointer(clientX, clientY) {
+// Koordinat Hesaplama
+function getWorldPos(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   return {
     x: Math.floor((clientX - rect.left - offsetX) / scale),
@@ -142,38 +140,12 @@ function getPixelPointer(clientX, clientY) {
   };
 }
 
-let isDragging = false;
-let lastPos = { x: 0, y: 0 };
-
-const startHook = (x, y) => {
-  isDragging = true; lastPos = { x, y };
-  if (isDrawMode) {
-    const pos = getPixelPointer(x, y);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
-  }
-};
-
-const moveHook = (x, y) => {
-  if (!isDragging) return;
-  if (isDrawMode) {
-    const pos = getPixelPointer(x, y);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
-  } else {
-    offsetX += x - lastPos.x; offsetY += y - lastPos.y;
-    lastPos = { x, y }; draw();
-  }
-};
-
-canvas.addEventListener("mousedown", e => startHook(e.clientX, e.clientY));
-window.addEventListener("mousemove", e => moveHook(e.clientX, e.clientY));
-window.addEventListener("mouseup", () => isDragging = false);
-
+// Pixel Koyma
 function placePixel(x, y) {
+  if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return;
   const key = `${x},${y}`;
   const existing = pixels[key];
-
-  // Eğer alan kilitliyse ve biz /yogidogi modunda değilsek çizimi engelle
-  if (existing && typeof existing === 'object' && existing.locked && !isLockedMode) return;
+  if (existing && existing.locked && !isLockedMode) return;
 
   pixels[key] = { color: currentColor, locked: isLockedMode };
   draw();
@@ -185,53 +157,86 @@ function placePixel(x, y) {
   });
 }
 
+// Mouse ve Touch Olayları
+canvas.addEventListener("mousedown", e => {
+  isDragging = true;
+  lastPos = { x: e.clientX, y: e.clientY };
+  if (isDrawMode) {
+    const pos = getWorldPos(e.clientX, e.clientY);
+    placePixel(pos.x, pos.y);
+  }
+});
+
+window.addEventListener("mousemove", e => {
+  if (!isDragging) return;
+  if (isDrawMode) {
+    const pos = getWorldPos(e.clientX, e.clientY);
+    placePixel(pos.x, pos.y);
+  } else {
+    offsetX += e.clientX - lastPos.x;
+    offsetY += e.clientY - lastPos.y;
+    lastPos = { x: e.clientX, y: e.clientY };
+    draw();
+  }
+});
+
+window.addEventListener("mouseup", () => isDragging = false);
+
+// Zoom Fonksiyonu (Düzeltildi)
+function changeZoom(factor, centerX, centerY) {
+  const worldPos = { x: (centerX - offsetX) / scale, y: (centerY - offsetY) / scale };
+  scale *= factor;
+  if (scale < 0.5) scale = 0.5;
+  if (scale > 80) scale = 80;
+  offsetX = centerX - worldPos.x * scale;
+  offsetY = centerY - worldPos.y * scale;
+  draw();
+}
+
+// Zoom Butonları
+document.getElementById("btn-zoom-in").onclick = () => changeZoom(1.5, canvas.width/2, canvas.height/2);
+document.getElementById("btn-zoom-out").onclick = () => changeZoom(0.7, canvas.width/2, canvas.height/2);
+
+// Hareket Butonları
+document.getElementById("btn-up").onclick = () => { offsetY += 80; draw(); };
+document.getElementById("btn-down").onclick = () => { offsetY -= 80; draw(); };
+document.getElementById("btn-left").onclick = () => { offsetX += 80; draw(); };
+document.getElementById("btn-right").onclick = () => { offsetX -= 80; draw(); };
+
+// Chat ve Komutlar
 async function sendChat() {
   const msg = chatInput.value.trim();
   if (!msg) return;
   chatInput.value = "";
-
-  // KOMUT KONTROLÜ
   if (msg === "/yogidogi") {
     isLockedMode = !isLockedMode;
-    alert("Koruma Modu: " + (isLockedMode ? "AKTİF" : "KAPALI"));
-    updateUIStatus();
+    alert("Koruma Modu: " + (isLockedMode ? "AÇIK" : "KAPALI"));
+    updateUI();
     return;
   }
-
   await fetch("/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ msg, user: "Oyuncu / Bayrak İnmez 🇹🇷" })
+    body: JSON.stringify({ msg, user: "Oyuncu" })
   });
-  syncAll();
 }
 
-chatSend.onclick = sendChat;
+document.getElementById("chat-send").onclick = sendChat;
 chatInput.onkeydown = (e) => { if(e.key === "Enter") sendChat(); };
 
-async function syncAll() {
+async function sync() {
   try {
     const pr = await fetch("/pixels");
-    const pData = await pr.json();
-    pixels = pData; 
-    draw();
-
+    pixels = await pr.json();
     const cr = await fetch("/chat");
     const cData = await cr.json();
-    if (JSON.stringify(cData) !== lastChatJson) {
-      lastChatJson = JSON.stringify(cData);
-      chatMessages.innerHTML = cData.map(m => `
-        <div class="msg-item">
-          <span class="msg-user">${m.user}:</span> ${m.msg}
-        </div>
-      `).join("");
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-  } catch (e) { console.error("Sync hatası"); }
+    chatMessages.innerHTML = cData.map(m => `<div><b>${m.user}:</b> ${m.msg}</div>`).join("");
+    draw();
+  } catch(e) {}
 }
 
-setInterval(syncAll, 2000);
-syncAll();
+setInterval(sync, 2000);
+sync();
 window.addEventListener("resize", draw);
 </script>
 </body>
