@@ -7,8 +7,10 @@ const DB_FILE = "./database.json";
 
 app.use(express.json());
 
+// Başlangıç verileri
 let data = { pixels: {}, chat: [] };
 
+// Dosyadan yükle
 if (fs.existsSync(DB_FILE)) {
   try {
     const fileData = fs.readFileSync(DB_FILE, "utf8");
@@ -21,25 +23,26 @@ app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/pixels", (req, res) => res.json(data.pixels));
 app.get("/chat", (req, res) => res.json(data.chat));
 
-// Pixel Kaydı - Korumalı
+// Pixel Kaydı (Kilit Kontrollü)
 app.post("/pixel", (req, res) => {
   const { x, y, color, locked } = req.body;
   const key = `${x},${y}`;
   const existing = data.pixels[key];
 
-  // KONTROL: Eğer alan kilitliyse ve gelen istek kilitli değilse (başkasıysa) engelle
+  // Eğer alan kilitliyse ve gelen istekte locked:true yoksa engelle
   if (existing && typeof existing === 'object' && existing.locked) {
     if (!locked) {
-      return res.status(403).json({ ok: false, error: "Kilitli alan!" });
+      return res.status(403).json({ ok: false, error: "Bu alan kilitli!" });
     }
   }
 
-  // Yeni formatta kaydet
+  // Yeni veriyi kaydet
   data.pixels[key] = { color, locked: !!locked };
   saveToFile();
   res.json({ ok: true });
 });
 
+// Chat Kaydı
 app.post("/chat", (req, res) => {
   const { user, msg } = req.body;
   if (msg) {
@@ -56,5 +59,5 @@ function saveToFile() {
   });
 }
 
-app.listen(PORT, () => console.log("Yogito Pixel & Chat aktif!"));
-      
+app.listen(PORT, () => console.log(`Sunucu http://localhost:${PORT} adresinde aktif!`));
+         
