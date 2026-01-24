@@ -1,51 +1,45 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Bakımda</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      height: 100vh;
-      background: #0f0f0f;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-    }
-    .box {
-      background: #1a1a1a;
-      padding: 40px 30px;
-      border-radius: 15px;
-      box-shadow: 0 0 30px rgba(0,0,0,0.7);
-      max-width: 420px;
-      width: 90%;
-    }
-    h1 {
-      color: #ff4d4d;
-      margin-bottom: 15px;
-      font-size: 22px;
-    }
-    p {
-      font-size: 16px;
-      opacity: 0.9;
-    }
-    .info {
-      margin-top: 25px;
-      font-size: 13px;
-      opacity: 0.6;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yogito Pixel</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="box">
-    <h1>Sitemiz DDoS yediği için şu an kapalıdır</h1>
-    <p>Sitemiz yakında tekrar açılacaktır.</p>
-    <div class="info">Anlayışınız için teşekkürler 🙏</div>
-  </div>
+    <div id="header">
+        <div class="logo-area">
+            <span style="font-weight:bold; font-size:20px;">Yogito Pixel</span>
+        </div>
+        <div class="palette">
+            <div class="color-btn selected" style="background: red;" data-color="red"></div>
+            <div class="color-btn" style="background: lime;" data-color="lime"></div>
+            <div class="color-btn" style="background: blue;" data-color="blue"></div>
+            <div class="color-btn" style="background: yellow;" data-color="yellow"></div>
+        </div>
+    </div>
+
+    <div id="canvas-container">
+        <canvas id="pixelCanvas" width="1000" height="1000"></canvas>
+    </div>
+
+    <div id="controls">
+        <div class="btn" id="pencilBtn">✎</div>
+        <div class="btn" onclick="movePixel(0, -1)">↑</div>
+        <div class="btn" onclick="movePixel(-1, 0)">←</div>
+        <div class="btn" onclick="movePixel(1, 0)">→</div>
+        <div class="btn" onclick="movePixel(0, 1)">↓</div>
+    </div>
+
+    <div id="chat-box">
+        <div id="messages"></div>
+        <div class="chat-input">
+            <input type="text" id="msgInput" placeholder="Mesaj yaz...">
+            <button id="sendBtn">></button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
