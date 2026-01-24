@@ -1,192 +1,264 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Yogito Pixel</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        body { margin: 0; background: #1a1a1a; color: #fff; font-family: sans-serif; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        header { height: 50px; background: #000; display: flex; align-items: center; justify-content: center; gap: 10px; border-bottom: 2px solid #333; }
-        #palette { height: 60px; background: #111; display: flex; align-items: center; gap: 10px; padding: 0 15px; overflow-x: auto; }
-        .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #444; cursor: pointer; flex-shrink: 0; }
-        .color.active { border-color: #fff; transform: scale(1.1); }
-        
-        #canvas-wrap { flex: 1; position: relative; overflow: hidden; background: #333; cursor: crosshair; }
-        canvas { background: #fff; image-rendering: pixelated; transform-origin: 0 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Yogito Pixel</title>
+<style>
+  body { margin: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+  header { height: 40px; line-height: 40px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
+  #palette { height: 55px; display: flex; gap: 8px; padding: 0 10px; align-items: center; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
+  .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
+  .color.active { border-color: #fff; transform: scale(1.1); }
+  
+  #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
+  canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
 
-        /* BUTONLAR */
-        #controls { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); display: grid; grid-template-columns: repeat(2, 55px); gap: 10px; z-index: 100; }
-        .btn { width: 55px; height: 55px; background: #d1d5db; border: 3px solid #000; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; box-shadow: 4px 4px 0px #000; color: #000; user-select: none; }
-        .btn:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000; }
-        #btn-pen.active { background: #fef08a; }
+  /* BUTON PANELI (SAĞ ORTA) */
+  #controls { 
+    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+    display: grid; grid-template-columns: repeat(2, 45px); gap: 8px; 
+    pointer-events: none; z-index: 20; 
+  }
+  .btn { 
+    width: 45px; height: 45px; background: #d1d5db; border: 2px solid #000; border-radius: 10px; 
+    display: flex; align-items: center; justify-content: center; font-size: 20px; 
+    cursor: pointer; pointer-events: auto; user-select: none; transition: 0.1s; 
+    box-shadow: 2px 2px 0px #000; color: #000; 
+  }
+  .btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000; }
+  #btn-pen.active { background: #fef08a; }
 
-        /* CHAT */
-        #chat-box { position: absolute; bottom: 20px; left: 15px; width: 250px; height: 200px; background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 10px; display: flex; flex-direction: column; z-index: 100; }
-        #messages { flex: 1; overflow-y: auto; padding: 10px; font-size: 13px; color: #ddd; }
-        #chat-input-area { display: flex; border-top: 1px solid #444; background: #222; }
-        input { flex: 1; background: transparent; border: none; color: #fff; padding: 10px; outline: none; }
-        #send { background: #444; border: none; color: #fff; padding: 0 15px; cursor: pointer; }
-    </style>
+  /* CHAT KUTUSU (SOL ALT) */
+  #chat-box {
+    position: absolute; bottom: 50px; left: 15px; width: 220px; height: 180px;
+    background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px;
+    display: flex; flex-direction: column; z-index: 30; overflow: hidden;
+  }
+  #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 12px; color: #ddd; scroll-behavior: smooth; }
+  #chat-input-area { display: flex; border-top: 1px solid #444; background: #222; }
+  #chat-input { flex: 1; background: transparent; border: none; color: white; padding: 8px; font-size: 12px; outline: none; }
+  #chat-send { background: #333; border: none; color: white; padding: 0 12px; cursor: pointer; font-weight: bold; }
+  .msg-item { margin-bottom: 6px; word-break: break-word; line-height: 1.4; }
+  .msg-user { font-weight: bold; color: #fef08a; margin-right: 4px; }
+
+  #ui { position: absolute; bottom: 10px; left: 15px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 20; color: #aaa; }
+</style>
 </head>
 <body>
 
-<header>
-    <img src="https://i.imgur.com/WU82uOE.jpeg" style="height:30px; border-radius:5px;">
-    <strong>Yogito Pixel</strong>
+<header style="display:flex;align-items:center;justify-content:center;gap:8px;">
+  <img src="https://i.imgur.com/WU82uOE.jpeg" style="height:24px;border-radius:4px;">
+  Yogito Pixel
 </header>
-
 <div id="palette"></div>
 
-<div id="canvas-wrap">
-    <canvas id="canvas"></canvas>
-    
-    <div id="controls">
-        <div id="btn-pen" class="btn">✎</div>
-        <div class="btn" id="btn-zoom-in">+</div>
-        <div class="btn" id="btn-up">↑</div>
-        <div class="btn" id="btn-zoom-out">−</div>
-        <div class="btn" id="btn-left">←</div>
-        <div class="btn" id="btn-right">→</div>
-        <div class="btn" style="grid-column: span 2;" id="btn-down">↓</div>
-    </div>
+<div id="wrap">
+  <canvas id="canvas"></canvas>
+  
+  <div id="controls">
+    <div id="btn-pen" class="btn">✎</div>
+    <div class="btn" id="btn-zoom-in">+</div>
+    <div class="btn" id="btn-up">↑</div>
+    <div class="btn" id="btn-zoom-out">−</div>
+    <div class="btn" id="btn-left">←</div>
+    <div class="btn" id="btn-right">→</div>
+    <div class="btn" style="grid-column: span 2;" id="btn-down">↓</div>
+  </div>
 
-    <div id="chat-box">
-        <div id="messages"></div>
-        <div id="chat-input-area">
-            <input type="text" id="chat-input" placeholder="Mesaj..." maxlength="50">
-            <button id="send">></button>
-        </div>
+  <div id="chat-box">
+    <div id="chat-messages"></div>
+    <div id="chat-input-area">
+      <input type="text" id="chat-input" placeholder="Mesaj yaz..." maxlength="50">
+      <button id="chat-send">></button>
     </div>
+  </div>
+
+  <div id="ui">Bağlanıyor...</div>
 </div>
 
 <script>
-    const socket = io();
-    const canvas = document.getElementById("canvas");
-    const ctx = canvas.getContext("2d");
-    const palette = document.getElementById("palette");
-    const btnPen = document.getElementById("btn-pen");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const ui = document.getElementById("ui");
+const btnPen = document.getElementById("btn-pen");
+const chatMessages = document.getElementById("chat-messages");
+const chatInput = document.getElementById("chat-input");
+const chatSend = document.getElementById("chat-send");
 
-    const MAP_SIZE = 1000;
-    const PIXEL_SIZE = 1; // Dahili pixel boyutu
-    let scale = 15; // Görünür pixel boyutu
-    let offsetX = 0, offsetY = 0;
-    let currentColor = "#ff0000";
-    let isDrawMode = false;
+const MAP_SIZE = 2000;
+let scale = 10; 
+let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
+let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
+let currentColor = "#ff0000";
+let pixels = {};
+let isDrawMode = false; 
+let lastChatJson = "";
 
-    // Renkleri oluştur
-    const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
-    colors.forEach(c => {
-        const d = document.createElement("div");
-        d.className = "color"; d.style.background = c;
-        if (c === currentColor) d.classList.add("active");
-        d.onclick = () => {
-            currentColor = c;
-            document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
-            d.classList.add("active");
-        };
-        palette.appendChild(d);
-    });
+const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
 
-    // Çizim Modu
-    btnPen.onclick = () => {
-        isDrawMode = !isDrawMode;
-        btnPen.classList.toggle("active", isDrawMode);
-    };
+const palette = document.getElementById("palette");
+colors.forEach(c => {
+  const d = document.createElement("div");
+  d.className = "color"; d.style.background = c;
+  if (c === currentColor) d.classList.add("active");
+  d.onclick = () => {
+    currentColor = c;
+    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
+    d.classList.add("active");
+  };
+  palette.appendChild(d);
+});
 
-    function drawGrid() {
-        canvas.width = MAP_SIZE * scale;
-        canvas.height = MAP_SIZE * scale;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Izgara çizimi (Yavaşlamaması için sadece belli bir zoomda çizilir)
-        if (scale > 5) {
-            ctx.strokeStyle = "#eee";
-            ctx.lineWidth = 0.5;
-            for(let i=0; i<=MAP_SIZE; i++) {
-                ctx.beginPath(); ctx.moveTo(i*scale, 0); ctx.lineTo(i*scale, canvas.height); ctx.stroke();
-                ctx.beginPath(); ctx.moveTo(0, i*scale); ctx.lineTo(canvas.width, i*scale); ctx.stroke();
-            }
-        }
+btnPen.onclick = (e) => {
+  e.stopPropagation();
+  isDrawMode = !isDrawMode;
+  btnPen.classList.toggle("active", isDrawMode);
+  ui.innerText = isDrawMode ? "Mod: Çizim (Sarı)" : "Mod: Gezinti (Gri)";
+};
+
+function draw() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 95;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  ctx.translate(offsetX, offsetY);
+  ctx.scale(scale, scale);
+  for (const key in pixels) {
+    const [px, py] = key.split(",");
+    ctx.fillStyle = pixels[key];
+    ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
+  }
+  if (scale > 5) {
+    ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.5 / scale; ctx.beginPath();
+    for (let i = 0; i <= MAP_SIZE; i += 1) { ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// Buton Kontrolleri
+document.getElementById("btn-up").onclick = () => { offsetY += 60; draw(); };
+document.getElementById("btn-down").onclick = () => { offsetY -= 60; draw(); };
+document.getElementById("btn-left").onclick = () => { offsetX += 60; draw(); };
+document.getElementById("btn-right").onclick = () => { offsetX -= 60; draw(); };
+document.getElementById("btn-zoom-in").onclick = () => { scale *= 1.2; draw(); };
+document.getElementById("btn-zoom-out").onclick = () => { scale /= 1.2; draw(); };
+
+function getPixelPointer(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: Math.floor((clientX - rect.left - offsetX) / scale),
+    y: Math.floor((clientY - rect.top - offsetY) / scale)
+  };
+}
+
+let isDragging = false;
+let lastPos = { x: 0, y: 0 };
+let lastPinchDist = 0;
+
+const startHook = (x, y) => {
+  isDragging = true; lastPos = { x, y };
+  if (!isDrawMode) {
+    const pos = getPixelPointer(x, y);
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
+  }
+};
+
+const moveHook = (x, y) => {
+  if (!isDragging) return;
+  if (isDrawMode) {
+    const pos = getPixelPointer(x, y);
+    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
+  } else {
+    offsetX += x - lastPos.x; offsetY += y - lastPos.y;
+    lastPos = { x, y }; draw();
+  }
+};
+
+canvas.addEventListener("mousedown", e => startHook(e.clientX, e.clientY));
+window.addEventListener("mousemove", e => moveHook(e.clientX, e.clientY));
+window.addEventListener("mouseup", () => isDragging = false);
+
+canvas.addEventListener("touchstart", e => {
+  if (e.touches.length === 2) {
+    isDragging = false;
+    lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+  } else { startHook(e.touches[0].clientX, e.touches[0].clientY); }
+}, { passive: false });
+
+canvas.addEventListener("touchmove", e => {
+  if (e.target.id !== "canvas") return;
+  e.preventDefault();
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95;
+    const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
+    scale = Math.max(0.5, Math.min(60, scale * (dist / lastPinchDist)));
+    offsetX = midX - worldPos.x * scale; offsetY = midY - worldPos.y * scale;
+    lastPinchDist = dist; draw();
+  } else { moveHook(e.touches[0].clientX, e.touches[0].clientY); }
+}, { passive: false });
+
+canvas.addEventListener("touchend", () => isDragging = false);
+
+function placePixel(x, y) {
+  const key = `${x},${y}`;
+  if (pixels[key] === currentColor) return;
+  pixels[key] = currentColor;
+  draw();
+  fetch("/pixel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ x, y, color: currentColor })
+  });
+}
+
+// CHAT FONKSİYONLARI
+async function sendChat() {
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+  chatInput.value = "";
+  await fetch("/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ msg, user: "Oyuncu" })
+  });
+  syncAll();
+}
+
+chatSend.onclick = sendChat;
+chatInput.onkeydown = (e) => { if(e.key === "Enter") sendChat(); };
+
+// CANLI SENKRONİZASYON (Hem Pixel Hem Chat)
+async function syncAll() {
+  try {
+    const pr = await fetch("/pixels");
+    const pData = await pr.json();
+    if (JSON.stringify(pData) !== JSON.stringify(pixels)) {
+      pixels = pData; draw();
     }
 
-    function renderPixel(x, y, color) {
-        ctx.fillStyle = color;
-        ctx.fillRect(x * scale, y * scale, scale, scale);
+    const cr = await fetch("/chat");
+    const cData = await cr.json();
+    if (JSON.stringify(cData) !== lastChatJson) {
+      lastChatJson = JSON.stringify(cData);
+      chatMessages.innerHTML = cData.map(m => `
+        <div class="msg-item">
+          <span class="msg-user">${m.user}:</span> ${m.msg}
+        </div>
+      `).join("");
+      chatMessages.scrollTop = chatMessages.scrollHeight;
     }
+    ui.innerText = "Canlı: Yogito Pixel & Chat";
+  } catch (e) { console.error("Sync hatası"); }
+}
 
-    // Hareket Kontrolleri
-    const wrap = document.getElementById("canvas-wrap");
-    document.getElementById("btn-up").onclick = () => wrap.scrollTop -= 50;
-    document.getElementById("btn-down").onclick = () => wrap.scrollTop += 50;
-    document.getElementById("btn-left").onclick = () => wrap.scrollLeft -= 50;
-    document.getElementById("btn-right").onclick = () => wrap.scrollLeft += 50;
-    document.getElementById("btn-zoom-in").onclick = () => { scale += 2; syncCanvas(); };
-    document.getElementById("btn-zoom-out").onclick = () => { if(scale > 2) scale -= 2; syncCanvas(); };
-
-    canvas.onclick = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = Math.floor((e.clientX - rect.left) / scale);
-        const y = Math.floor((e.clientY - rect.top) / scale);
-        
-        if (isDrawMode) {
-            renderPixel(x, y, currentColor);
-            socket.emit('draw-pixel', { x, y, color: currentColor });
-        }
-    };
-
-    // Socket Olayları
-    let localPixels = {};
-    function syncCanvas() {
-        drawGrid();
-        for (let key in localPixels) {
-            const [x, y] = key.split(",");
-            renderPixel(x, y, localPixels[key]);
-        }
-    }
-
-    socket.on('init-canvas', (data) => {
-        localPixels = data;
-        syncCanvas();
-    });
-
-    socket.on('update-pixel', (data) => {
-        localPixels[`${data.x},${data.y}`] = data.color;
-        renderPixel(data.x, data.y, data.color);
-    });
-
-    // CHAT MANTIĞI
-    const msgInput = document.getElementById("chat-input");
-    const msgBox = document.getElementById("messages");
-    
-    function send() {
-        if (msgInput.value.trim()) {
-            socket.emit('chat-message', { text: msgInput.value });
-            msgInput.value = "";
-        }
-    }
-    document.getElementById("send").onclick = send;
-    msgInput.onkeydown = (e) => { if(e.key === "Enter") send(); };
-
-    socket.on('chat-message', (data) => {
-        const div = document.createElement("div");
-        div.style.marginBottom = "5px";
-        div.innerHTML = `<b style="color:#fef08a">${data.user}:</b> ${data.text}`;
-        msgBox.appendChild(div);
-        msgBox.scrollTop = msgBox.scrollHeight;
-    });
-
-    socket.on('init-chat', (history) => {
-        msgBox.innerHTML = "";
-        history.forEach(m => {
-            const div = document.createElement("div");
-            div.innerHTML = `<b style="color:#fef08a">${m.user}:</b> ${m.text}`;
-            msgBox.appendChild(div);
-        });
-        msgBox.scrollTop = msgBox.scrollHeight;
-    });
-
-    window.onload = syncCanvas;
+setInterval(syncAll, 2000);
+syncAll();
+window.addEventListener("resize", draw);
 </script>
 </body>
-</html>
+    </html>
