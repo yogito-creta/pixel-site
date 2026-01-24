@@ -2,29 +2,36 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Yogito Pixel</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="./style.css">
+    <style>
+        /* CSS dosyası yüklenmezse diye temel bir kaç kuralı buraya da ekliyoruz */
+        body { margin: 0; padding: 0; background-color: #f0f0f0; }
+        #pixelCanvas { display: block; margin: 0 auto; border: 1px solid #ccc; }
+    </style>
 </head>
 <body>
-    <div id="header">
-        <div class="logo-area">
-            <span style="font-weight:bold; font-size:20px;">Yogito Pixel</span>
+
+    <div id="header" style="display: flex; align-items: center; background: #000; color: #fff; padding: 10px; gap: 20px;">
+        <div class="logo-area" style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 30px; height: 30px; background: #444; border-radius: 5px;"></div>
+            <span style="font-weight: bold; font-size: 1.2rem;">Yogito Pixel</span>
         </div>
-        <div class="palette">
-            <div class="color-btn selected" style="background: red;" data-color="red"></div>
-            <div class="color-btn" style="background: lime;" data-color="lime"></div>
-            <div class="color-btn" style="background: blue;" data-color="blue"></div>
-            <div class="color-btn" style="background: yellow;" data-color="yellow"></div>
+        <div class="palette" style="display: flex; gap: 8px;">
+            <div class="color-btn selected" style="background: red; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; border: 2px solid #fff;" data-color="red"></div>
+            <div class="color-btn" style="background: lime; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; border: 1px solid #444;" data-color="lime"></div>
+            <div class="color-btn" style="background: blue; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; border: 1px solid #444;" data-color="blue"></div>
+            <div class="color-btn" style="background: yellow; width: 30px; height: 30px; border-radius: 5px; cursor: pointer; border: 1px solid #444;" data-color="yellow"></div>
         </div>
     </div>
 
-    <div id="canvas-container">
+    <div id="canvas-wrapper" style="width: 100%; height: calc(100vh - 150px); overflow: auto; background: #ddd; position: relative;">
         <canvas id="pixelCanvas" width="1000" height="1000"></canvas>
     </div>
 
     <div id="controls">
-        <div class="btn" id="pencilBtn">✎</div>
+        <div class="btn" id="pencilBtn" title="Kalem Modu">✎</div>
         <div class="btn" onclick="movePixel(0, -1)">↑</div>
         <div class="btn" onclick="movePixel(-1, 0)">←</div>
         <div class="btn" onclick="movePixel(1, 0)">→</div>
@@ -34,12 +41,13 @@
     <div id="chat-box">
         <div id="messages"></div>
         <div class="chat-input">
-            <input type="text" id="msgInput" placeholder="Mesaj yaz...">
+            <input type="text" id="msgInput" placeholder="Mesaj yaz..." autocomplete="off">
             <button id="sendBtn">></button>
         </div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="script.js"></script>
+    <script src="./script.js"></script>
+
 </body>
 </html>
