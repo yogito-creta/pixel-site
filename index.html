@@ -232,19 +232,29 @@ async function sendChat() {
 chatSend.onclick = sendChat;
 chatInput.onkeydown = (e) => { if(e.key === "Enter") sendChat(); };
 
-// CANLI SENKRONİZASYON (Hem Pixel Hem Chat)
+// CANLI SENKRON (PIXEL + CHAT)
 async function syncAll() {
   try {
+    // PIXEL SENKRON
     const pr = await fetch("/pixels");
     const pData = await pr.json();
-    if (JSON.stringify(pData) !== JSON.stringify(pixels)) {
-      pixels = pData; draw();
-    }
 
+    let changed = false;
+    for (const key in pData) {
+      if (!pixels[key]) {
+        pixels[key] = pData[key];
+        changed = true;
+      }
+    }
+    if (changed) draw();
+
+    // CHAT SENKRON
     const cr = await fetch("/chat");
     const cData = await cr.json();
-    if (JSON.stringify(cData) !== lastChatJson) {
-      lastChatJson = JSON.stringify(cData);
+    const json = JSON.stringify(cData);
+
+    if (json !== lastChatJson) {
+      lastChatJson = json;
       chatMessages.innerHTML = cData.map(m => `
         <div class="msg-item">
           <span class="msg-user">${m.user}:</span> ${m.msg}
@@ -252,13 +262,12 @@ async function syncAll() {
       `).join("");
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-    ui.innerText = "Canlı: Yogito Pixel & Chat";
-  } catch (e) { console.error("Sync hatası"); }
-}
 
-setInterval(syncAll, 2000);
-syncAll();
-window.addEventListener("resize", draw);
+    ui.innerText = "Canlı: Yogito Pixel & Chat";
+  } catch (e) {
+    console.error("Sync hatası", e);
+  }
+}
 </script>
 </body>
 </html>
