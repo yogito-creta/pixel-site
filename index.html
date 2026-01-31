@@ -249,7 +249,7 @@ async function sendChat() {
   await fetch("/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ msg, user: "Oyuncu" })
+    body: JSON.stringify({ msg, user: "Sansar Salvo" })
   });
   syncAll();
 }
