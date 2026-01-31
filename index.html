@@ -95,7 +95,32 @@ let pixels = {};
 let isDrawMode = false; 
 let lastChatJson = "";
 
-const colors = ["#ffffff","#000000","#ff0000","#00ff00","#0000ff","#ffff00","#ff00ff","#00ffff","#ffa500","#964b00"];
+const colors = [
+  "#ffffff", "#000000", "#ff0000", "#00ff00", "#0000ff",
+  "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#964b00",
+
+  // 🔥 ekstra 20 renk
+  "#808080", // gri
+  "#c0c0c0", // açık gri
+  "#800000", // bordo
+  "#808000", // zeytin
+  "#008000", // koyu yeşil
+  "#800080", // koyu mor
+  "#008080", // teal
+  "#000080", // lacivert
+  "#ff69b4", // pembe
+  "#ff1493", // koyu pembe
+  "#add8e6", // açık mavi
+  "#87ceeb", // gökyüzü mavisi
+  "#90ee90", // açık yeşil
+  "#32cd32", // lime
+  "#ffd700", // altın
+  "#daa520", // goldenrod
+  "#a52a2a", // kahverengi koyu
+  "#deb887", // açık kahve
+  "#f5deb3", // buğday
+  "#2f4f4f"  // koyu gri
+];
 
 const palette = document.getElementById("palette");
 colors.forEach(c => {
