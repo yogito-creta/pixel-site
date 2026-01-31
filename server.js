@@ -42,13 +42,17 @@ app.get("/chat", (req, res) => {
 
 // CHAT MESAJI
 app.post("/chat", (req, res) => {
-  const { user, msg } = req.body;
+  const { msg } = req.body;
   if (!msg) return res.json({ ok: false });
 
   chats.push({
-    user: user || "Anonim",
+    user: "Sansar Salvo",
     msg: msg.toString().slice(0, 50)
   });
+
+  if (chats.length > 100) chats.shift();
+  res.json({ ok: true });
+});
 
   // CHAT ŞİŞMESİN
   if (chats.length > 100) chats.shift();
