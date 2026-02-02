@@ -4,64 +4,27 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
-// VERİLER (RAM)
 let pixels = {};
-let chats = [];
 
 app.use(express.json());
 
-// INDEX
+// index.html'i ROOT'tan servis et (public yok!)
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// ================= PIXEL =================
-
-// TÜM PIXELLER
+// pixel verilerini ver
 app.get("/pixels", (req, res) => {
   res.json(pixels);
 });
 
-// PIXEL KOY
+// pixel kaydet
 app.post("/pixel", (req, res) => {
   const { x, y, color } = req.body;
-  if (x == null || y == null || !color) {
-    return res.json({ ok: false });
-  }
-
   pixels[`${x},${y}`] = color;
   res.json({ ok: true });
 });
 
-// ================= CHAT =================
-
-// CHAT LİSTESİ
-app.get("/chat", (req, res) => {
-  res.json(chats);
-});
-
-// CHAT MESAJI
-app.post("/chat", (req, res) => {
-  const { msg } = req.body;
-  if (!msg) return res.json({ ok: false });
-
-  chats.push({
-    user: "Sansar Salvo",
-    msg: msg.toString().slice(0, 50)
-  });
-
-  if (chats.length > 100) chats.shift();
-  res.json({ ok: true });
-});
-
-  // CHAT ŞİŞMESİN
-  if (chats.length > 100) chats.shift();
-
-  res.json({ ok: true });
-});
-
-// ================= START =================
-
 app.listen(PORT, () => {
-  console.log("🔥 Yogito Pixel Server ayakta:", PORT);
+  console.log("Server ayakta:", PORT);
 });
