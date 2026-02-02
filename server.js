@@ -4,27 +4,60 @@ const app = express();
 
 const PORT = process.env.PORT || 3000;
 
+// VERİLER (RAM)
 let pixels = {};
+let chats = [];
 
 app.use(express.json());
 
-// index.html'i ROOT'tan servis et (public yok!)
+// INDEX
 app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// pixel verilerini ver
+// ================= PIXEL =================
+
+// TÜM PIXELLER
 app.get("/pixels", (req, res) => {
-  res.json(pixels);
+res.json(pixels);
 });
 
-// pixel kaydet
+// PIXEL KOY
 app.post("/pixel", (req, res) => {
-  const { x, y, color } = req.body;
-  pixels[`${x},${y}`] = color;
-  res.json({ ok: true });
+const { x, y, color } = req.body;
+if (x == null || y == null || !color) {
+return res.json({ ok: false });
+}
+
+pixels[${x},${y}] = color;
+res.json({ ok: true });
 });
+
+// ================= CHAT =================
+
+// CHAT LİSTESİ
+app.get("/chat", (req, res) => {
+res.json(chats);
+});
+
+// CHAT MESAJI
+app.post("/chat", (req, res) => {
+const { user, msg } = req.body;
+if (!msg) return res.json({ ok: false });
+
+chats.push({
+user: user || "Anonim",
+msg: msg.toString().slice(0, 50)
+});
+
+// CHAT ŞİŞMESİN
+if (chats.length > 100) chats.shift();
+
+res.json({ ok: true });
+});
+
+// ================= START =================
 
 app.listen(PORT, () => {
-  console.log("Server ayakta:", PORT);
+console.log("🔥 Yogito Pixel Server ayakta:", PORT);
 });
