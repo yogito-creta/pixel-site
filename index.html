@@ -2,288 +2,119 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Yogito Pixel</title>
+<title>Taşındık!</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-  body { margin: 0; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-  header { height: 40px; line-height: 40px; text-align: center; background: #111; z-index: 10; font-weight: bold; border-bottom: 1px solid #333; font-size: 14px; }
-  #palette { height: 55px; display: flex; gap: 8px; padding: 0 10px; align-items: center; overflow-x: auto; background: #111; z-index: 10; border-bottom: 1px solid #222; }
-  .color { width: 35px; height: 35px; border-radius: 8px; border: 2px solid #333; cursor: pointer; flex-shrink: 0; }
-  .color.active { border-color: #fff; transform: scale(1.1); }
-  
-  #wrap { flex: 1; position: relative; overflow: hidden; background: #1a1a1a; }
-  canvas { image-rendering: pixelated; touch-action: none; background: #ffffff; display: block; }
-
-  /* BUTON PANELI (SAĞ ORTA) */
-  #controls { 
-    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
-    display: grid; grid-template-columns: repeat(2, 45px); gap: 8px; 
-    pointer-events: none; z-index: 20; 
+  body {
+    margin: 0;
+    height: 100vh;
+    background: radial-gradient(circle at top, #0f2027, #000);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    color: #fff;
+    overflow: hidden;
   }
-  .btn { 
-    width: 45px; height: 45px; background: #d1d5db; border: 2px solid #000; border-radius: 10px; 
-    display: flex; align-items: center; justify-content: center; font-size: 20px; 
-    cursor: pointer; pointer-events: auto; user-select: none; transition: 0.1s; 
-    box-shadow: 2px 2px 0px #000; color: #000; 
-  }
-  .btn:active { transform: translate(1px, 1px); box-shadow: 0px 0px 0px #000; }
-  #btn-pen.active { background: #fef08a; }
 
-  /* CHAT KUTUSU (SOL ALT) */
-  #chat-box {
-    position: absolute; bottom: 50px; left: 15px; width: 220px; height: 180px;
-    background: rgba(0,0,0,0.85); border: 1px solid #444; border-radius: 8px;
-    display: flex; flex-direction: column; z-index: 30; overflow: hidden;
+  .box {
+    text-align: center;
+    padding: 50px;
+    border-radius: 25px;
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 0 50px rgba(0,255,255,0.35);
+    backdrop-filter: blur(12px);
   }
-  #chat-messages { flex: 1; overflow-y: auto; padding: 8px; font-size: 12px; color: #ddd; scroll-behavior: smooth; }
-  #chat-input-area { display: flex; border-top: 1px solid #444; background: #222; }
-  #chat-input { flex: 1; background: transparent; border: none; color: white; padding: 8px; font-size: 12px; outline: none; }
-  #chat-send { background: #333; border: none; color: white; padding: 0 12px; cursor: pointer; font-weight: bold; }
-  .msg-item { margin-bottom: 6px; word-break: break-word; line-height: 1.4; }
-  .msg-user { font-weight: bold; color: #fef08a; margin-right: 4px; }
 
-  #ui { position: absolute; bottom: 10px; left: 15px; background: rgba(0,0,0,0.7); padding: 4px 8px; border-radius: 4px; font-size: 10px; pointer-events: none; z-index: 20; color: #aaa; }
+  .text {
+    font-size: 34px;
+    font-weight: bold;
+    min-height: 45px;
+    letter-spacing: 2px;
+  }
+
+  .glitch {
+    animation: glitch 0.6s linear;
+  }
+
+  @keyframes glitch {
+    0% { text-shadow: 2px 0 red, -2px 0 cyan; }
+    20% { text-shadow: -2px 0 red, 2px 0 cyan; }
+    40% { text-shadow: 2px 2px red, -2px -2px cyan; }
+    60% { text-shadow: -2px -2px red, 2px 2px cyan; }
+    100% { text-shadow: none; }
+  }
+
+  .btn {
+    margin-top: 35px;
+    padding: 16px 40px;
+    font-size: 18px;
+    border: none;
+    border-radius: 60px;
+    cursor: pointer;
+    background: linear-gradient(135deg, #00f2ff, #0066ff);
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 0 30px rgba(0,200,255,0.7);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: none;
+  }
+
+  .btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 45px rgba(0,200,255,1);
+  }
 </style>
 </head>
 <body>
 
-<header style="display:flex;align-items:center;justify-content:center;gap:8px;">
-  <img src="https://i.imgur.com/01uvSHc.png" style="height:24px;border-radius:4px;">
-  Yogito Pixel
-</header>
-<div id="palette"></div>
-
-<div id="wrap">
-  <canvas id="canvas"></canvas>
-  
-  <div id="controls">
-    <div id="btn-pen" class="btn">✎</div>
-    <div class="btn" id="btn-zoom-in">+</div>
-    <div class="btn" id="btn-up">↑</div>
-    <div class="btn" id="btn-zoom-out">−</div>
-    <div class="btn" id="btn-left">←</div>
-    <div class="btn" id="btn-right">→</div>
-    <div class="btn" style="grid-column: span 2;" id="btn-down">↓</div>
-  </div>
-
-  <div id="chat-box">
-    <div id="chat-messages"></div>
-    <div id="chat-input-area">
-      <input type="text" id="chat-input" placeholder="Mesaj yaz..." maxlength="50">
-      <button id="chat-send">></button>
-    </div>
-  </div>
-
-  <div id="ui">Bağlanıyor...</div>
+<div class="box">
+  <div id="text" class="text"></div>
+  <button id="btn" class="btn"
+    onclick="window.location.href='https://pixel-infinity--yigitaksakal20.replit.app'">
+    Siteye Git 🥲
+  </button>
 </div>
 
 <script>
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const ui = document.getElementById("ui");
-const btnPen = document.getElementById("btn-pen");
-const chatMessages = document.getElementById("chat-messages");
-const chatInput = document.getElementById("chat-input");
-const chatSend = document.getElementById("chat-send");
+  const textEl = document.getElementById("text");
+  const btn = document.getElementById("btn");
 
-const MAP_SIZE = 2000;
-let scale = 10; 
-let offsetX = window.innerWidth / 2 - (MAP_SIZE * scale) / 2;
-let offsetY = (window.innerHeight - 95) / 2 - (MAP_SIZE * scale) / 2;
-let currentColor = "#ff0000";
-let pixels = {};
-let isDrawMode = false; 
-let lastChatJson = "";
-
-const colors = [
-  "#ffffff", "#000000", "#ff0000", "#00ff00", "#0000ff",
-  "#ffff00", "#ff00ff", "#00ffff", "#ffa500", "#964b00",
-
-  // 🔥 ekstra 20 renk
-  "#808080", // gri
-  "#c0c0c0", // açık gri
-  "#800000", // bordo
-  "#808000", // zeytin
-  "#008000", // koyu yeşil
-  "#800080", // koyu mor
-  "#008080", // teal
-  "#000080", // lacivert
-  "#ff69b4", // pembe
-  "#ff1493", // koyu pembe
-  "#add8e6", // açık mavi
-  "#87ceeb", // gökyüzü mavisi
-  "#90ee90", // açık yeşil
-  "#32cd32", // lime
-  "#ffd700", // altın
-  "#daa520", // goldenrod
-  "#a52a2a", // kahverengi koyu
-  "#deb887", // açık kahve
-  "#f5deb3", // buğday
-  "#2f4f4f"  // koyu gri
-];
-
-const palette = document.getElementById("palette");
-colors.forEach(c => {
-  const d = document.createElement("div");
-  d.className = "color"; d.style.background = c;
-  if (c === currentColor) d.classList.add("active");
-  d.onclick = () => {
-    currentColor = c;
-    document.querySelectorAll(".color").forEach(x => x.classList.remove("active"));
-    d.classList.add("active");
-  };
-  palette.appendChild(d);
-});
-
-btnPen.onclick = (e) => {
-  e.stopPropagation();
-  isDrawMode = !isDrawMode;
-  btnPen.classList.toggle("active", isDrawMode);
-  ui.innerText = isDrawMode ? "Mod: Çizim (Sarı)" : "Mod: Gezinti (Gri)";
-};
-
-function draw() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight - 95;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.save();
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scale, scale);
-  for (const key in pixels) {
-    const [px, py] = key.split(",");
-    ctx.fillStyle = pixels[key];
-    ctx.fillRect(parseInt(px), parseInt(py), 1, 1);
+  function typeText(text, speed, callback) {
+    let i = 0;
+    textEl.textContent = "";
+    const interval = setInterval(() => {
+      textEl.textContent += text[i];
+      i++;
+      if (i >= text.length) {
+        clearInterval(interval);
+        if (callback) callback();
+      }
+    }, speed);
   }
-  if (scale > 5) {
-    ctx.strokeStyle = "#e0e0e0"; ctx.lineWidth = 0.5 / scale; ctx.beginPath();
-    for (let i = 0; i <= MAP_SIZE; i += 1) { ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); }
-    ctx.stroke();
-  }
-  ctx.restore();
-}
 
-// Buton Kontrolleri
-document.getElementById("btn-up").onclick = () => { offsetY += 60; draw(); };
-document.getElementById("btn-down").onclick = () => { offsetY -= 60; draw(); };
-document.getElementById("btn-left").onclick = () => { offsetX += 60; draw(); };
-document.getElementById("btn-right").onclick = () => { offsetX -= 60; draw(); };
-document.getElementById("btn-zoom-in").onclick = () => { scale *= 1.2; draw(); };
-document.getElementById("btn-zoom-out").onclick = () => { scale /= 1.2; draw(); };
+  // Merhaba! havalı giriş
+  setTimeout(() => {
+    typeText("Merhaba!", 120, () => {
+      textEl.classList.add("glitch");
+    });
+  }, 800);
 
-function getPixelPointer(clientX, clientY) {
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: Math.floor((clientX - rect.left - offsetX) / scale),
-    y: Math.floor((clientY - rect.top - offsetY) / scale)
-  };
-}
+  // Mesaj
+  setTimeout(() => {
+    textEl.classList.remove("glitch");
+    typeText("Sitemizin linkini taşıdık 🥲", 80, () => {
+      textEl.classList.add("glitch");
+    });
+  }, 3500);
 
-let isDragging = false;
-let lastPos = { x: 0, y: 0 };
-let lastPinchDist = 0;
-
-const startHook = (x, y) => {
-  isDragging = true; lastPos = { x, y };
-  if (!isDrawMode) {
-    const pos = getPixelPointer(x, y);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
-  }
-};
-
-const moveHook = (x, y) => {
-  if (!isDragging) return;
-  if (isDrawMode) {
-    const pos = getPixelPointer(x, y);
-    if (pos.x >= 0 && pos.x < MAP_SIZE && pos.y >= 0 && pos.y < MAP_SIZE) placePixel(pos.x, pos.y);
-  } else {
-    offsetX += x - lastPos.x; offsetY += y - lastPos.y;
-    lastPos = { x, y }; draw();
-  }
-};
-
-canvas.addEventListener("mousedown", e => startHook(e.clientX, e.clientY));
-window.addEventListener("mousemove", e => moveHook(e.clientX, e.clientY));
-window.addEventListener("mouseup", () => isDragging = false);
-
-canvas.addEventListener("touchstart", e => {
-  if (e.touches.length === 2) {
-    isDragging = false;
-    lastPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-  } else { startHook(e.touches[0].clientX, e.touches[0].clientY); }
-}, { passive: false });
-
-canvas.addEventListener("touchmove", e => {
-  if (e.target.id !== "canvas") return;
-  e.preventDefault();
-  if (e.touches.length === 2) {
-    const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
-    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - 95;
-    const worldPos = { x: (midX - offsetX) / scale, y: (midY - offsetY) / scale };
-    scale = Math.max(0.5, Math.min(60, scale * (dist / lastPinchDist)));
-    offsetX = midX - worldPos.x * scale; offsetY = midY - worldPos.y * scale;
-    lastPinchDist = dist; draw();
-  } else { moveHook(e.touches[0].clientX, e.touches[0].clientY); }
-}, { passive: false });
-
-canvas.addEventListener("touchend", () => isDragging = false);
-
-function placePixel(x, y) {
-  const key = `${x},${y}`;
-  if (pixels[key] === currentColor) return;
-  pixels[key] = currentColor;
-  draw();
-  fetch("/pixel", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ x, y, color: currentColor })
-  });
-}
-
-// CHAT FONKSİYONLARI
-async function sendChat() {
-  const msg = chatInput.value.trim();
-  if (!msg) return;
-  chatInput.value = "";
-  await fetch("/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ msg, user: "Sansar Salvo" })
-  });
-  syncAll();
-}
-
-chatSend.onclick = sendChat;
-chatInput.onkeydown = (e) => { if(e.key === "Enter") sendChat(); };
-
-// CANLI SENKRONİZASYON (Hem Pixel Hem Chat)
-async function syncAll() {
-  try {
-    const pr = await fetch("/pixels");
-    const pData = await pr.json();
-    if (JSON.stringify(pData) !== JSON.stringify(pixels)) {
-      pixels = pData; draw();
-    }
-
-    const cr = await fetch("/chat");
-    const cData = await cr.json();
-    if (JSON.stringify(cData) !== lastChatJson) {
-      lastChatJson = JSON.stringify(cData);
-      chatMessages.innerHTML = cData.map(m => `
-        <div class="msg-item">
-          <span class="msg-user">${m.user}:</span> ${m.msg}
-        </div>
-      `).join("");
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-    ui.innerText = "Canlı: Yogito Pixel & Chat";
-  } catch (e) { console.error("Sync hatası"); }
-}
-
-setInterval(syncAll, 2000);
-syncAll();
-window.addEventListener("resize", draw);
+  // Buton
+  setTimeout(() => {
+    textEl.style.display = "none";
+    btn.style.display = "inline-block";
+  }, 7000);
 </script>
+
 </body>
 </html>
