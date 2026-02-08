@@ -1,119 +1,137 @@
+<!DOCTYPE html>
+<html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="google-site-verification" content="PUWV1-YW3t0VYoZBcjSrLPYBwh8QGQ1_NMCfd2_GBYo" />
-<title>Yogito Pixel</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
 
-<style>
-  body {
-    margin: 0;
-    height: 100vh;
-    background: radial-gradient(circle at top, #0f2027, #000);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Segoe UI', Tahoma, sans-serif;
-    color: #fff;
-    overflow: hidden;
-  }
+  <!-- Google doğrulama -->
+  <meta name="google-site-verification" content="PUWV1-YW3t0VYoZBcjSrLPYBwh8QGQ1_NMCfd2_GBYo" />
 
-  .box {
-    text-align: center;
-    padding: 50px;
-    border-radius: 25px;
-    background: rgba(255,255,255,0.05);
-    box-shadow: 0 0 50px rgba(0,255,255,0.35);
-    backdrop-filter: blur(12px);
-  }
+  <!-- Google alt açıklama -->
+  <meta name="description" content="100% Türk pixel sitesi. Pixel sınırı yok, özgürce pixel yerleştir!" />
 
-  .text {
-    font-size: 34px;
-    font-weight: bold;
-    min-height: 45px;
-    letter-spacing: 2px;
-  }
+  <title>Yogito Pixel | 100% Türk Pixel Sitesi</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  .glitch {
-    animation: glitch 0.6s linear;
-  }
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: radial-gradient(circle at top, #0f2027, #000);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      color: #fff;
+      overflow: hidden;
+    }
 
-  @keyframes glitch {
-    0% { text-shadow: 2px 0 red, -2px 0 cyan; }
-    20% { text-shadow: -2px 0 red, 2px 0 cyan; }
-    40% { text-shadow: 2px 2px red, -2px -2px cyan; }
-    60% { text-shadow: -2px -2px red, 2px 2px cyan; }
-    100% { text-shadow: none; }
-  }
+    .box {
+      text-align: center;
+      padding: 50px;
+      border-radius: 25px;
+      background: rgba(255,255,255,0.05);
+      box-shadow: 0 0 50px rgba(0,255,255,0.35);
+      backdrop-filter: blur(12px);
+    }
 
-  .btn {
-    margin-top: 35px;
-    padding: 16px 40px;
-    font-size: 18px;
-    border: none;
-    border-radius: 60px;
-    cursor: pointer;
-    background: linear-gradient(135deg, #00f2ff, #0066ff);
-    color: #000;
-    font-weight: bold;
-    box-shadow: 0 0 30px rgba(0,200,255,0.7);
-    transition: transform 0.2s, box-shadow 0.2s;
-    display: none;
-  }
+    .text {
+      font-size: 34px;
+      font-weight: bold;
+      min-height: 45px;
+      letter-spacing: 2px;
+    }
 
-  .btn:hover {
-    transform: scale(1.1);
-    box-shadow: 0 0 45px rgba(0,200,255,1);
-  }
-</style>
+    .subtitle {
+      margin-top: 15px;
+      font-size: 16px;
+      opacity: 0.85;
+      letter-spacing: 1px;
+    }
+
+    .glitch {
+      animation: glitch 0.6s linear;
+    }
+
+    @keyframes glitch {
+      0% { text-shadow: 2px 0 red, -2px 0 cyan; }
+      20% { text-shadow: -2px 0 red, 2px 0 cyan; }
+      40% { text-shadow: 2px 2px red, -2px -2px cyan; }
+      60% { text-shadow: -2px -2px red, 2px 2px cyan; }
+      100% { text-shadow: none; }
+    }
+
+    .btn {
+      margin-top: 35px;
+      padding: 16px 40px;
+      font-size: 18px;
+      border: none;
+      border-radius: 60px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #00f2ff, #0066ff);
+      color: #000;
+      font-weight: bold;
+      box-shadow: 0 0 30px rgba(0,200,255,0.7);
+      transition: transform 0.2s, box-shadow 0.2s;
+      display: none;
+    }
+
+    .btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 45px rgba(0,200,255,1);
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="box">
-  <div id="text" class="text"></div>
-  <button id="btn" class="btn"
-    onclick="window.location.href='https://pixel-infinity--yigitaksakal20.replit.app'">
-    Siteye Git 🥲
-  </button>
-</div>
+  <div class="box">
+    <div id="text" class="text"></div>
+    <div class="subtitle">100% Türk pixel sitesi (pixel sınırı yok)</div>
 
-<script>
-  const textEl = document.getElementById("text");
-  const btn = document.getElementById("btn");
+    <button id="btn" class="btn"
+      onclick="window.location.href='https://pixel-infinity--yigitaksakal20.replit.app'">
+      Siteye Git 🥲
+    </button>
+  </div>
 
-  function typeText(text, speed, callback) {
-    let i = 0;
-    textEl.textContent = "";
-    const interval = setInterval(() => {
-      textEl.textContent += text[i];
-      i++;
-      if (i >= text.length) {
-        clearInterval(interval);
-        if (callback) callback();
-      }
-    }, speed);
-  }
+  <script>
+    const textEl = document.getElementById("text");
+    const btn = document.getElementById("btn");
 
-  // Merhaba! havalı giriş
-  setTimeout(() => {
-    typeText("Merhaba!", 120, () => {
-      textEl.classList.add("glitch");
-    });
-  }, 800);
+    function typeText(text, speed, callback) {
+      let i = 0;
+      textEl.textContent = "";
+      const interval = setInterval(() => {
+        textEl.textContent += text[i];
+        i++;
+        if (i >= text.length) {
+          clearInterval(interval);
+          if (callback) callback();
+        }
+      }, speed);
+    }
 
-  // Mesaj
-  setTimeout(() => {
-    textEl.classList.remove("glitch");
-    typeText("Sitemizin linkini taşıdık 🥲", 80, () => {
-      textEl.classList.add("glitch");
-    });
-  }, 3500);
+    // Merhaba! havalı giriş
+    setTimeout(() => {
+      typeText("Merhaba!", 120, () => {
+        textEl.classList.add("glitch");
+      });
+    }, 800);
 
-  // Buton
-  setTimeout(() => {
-    textEl.style.display = "none";
-    btn.style.display = "inline-block";
-  }, 7000);
-</script>
+    // Mesaj
+    setTimeout(() => {
+      textEl.classList.remove("glitch");
+      typeText("Sitemizin linkini taşıdık 🥲", 80, () => {
+        textEl.classList.add("glitch");
+      });
+    }, 3500);
+
+    // Buton
+    setTimeout(() => {
+      textEl.style.display = "none";
+      btn.style.display = "inline-block";
+    }, 7000);
+  </script>
 
 </body>
 </html>
